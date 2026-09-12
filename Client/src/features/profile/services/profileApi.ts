@@ -1,49 +1,29 @@
 import apiClient from '@/services/apiClient';
-import type { UserProfile, ProjectLink } from '../types/profile.types';
+import type { UserProfile } from '../types/profile.types';
 
 const defaultProfile: UserProfile = {
-  name: 'Trần Quang Lâm',
+  id: '1',
+  username: 'admin',
+  fullName: 'Trần Quang Lâm',
   role: 'SOFTWARE ENGINEER',
   studentId: 'B23DCCN480',
   email: 'lamtq.work@gmail.com',
   location: 'Hanoi, Vietnam',
-  isOnline: true,
+  avatarUrl: '', // Link ảnh avatar từ DB (để trống nếu dùng avatar icon mặc định)
+  iotReportUrl: 'https://github.com',
+  apiDocsUrl: 'http://localhost:5000/api-docs',
+  githubUrl: 'https://github.com',
+  figmaUrl: 'https://figma.com',
 };
 
-const defaultProjects: ProjectLink[] = [
-  {
-    id: 'iot-report',
-    title: 'IoT Project Report:',
-    url: 'https://github.com',
-  },
-  {
-    id: 'api-docs',
-    title: 'API docs:',
-    url: 'http://localhost:5000/api-docs',
-  },
-  {
-    id: 'github',
-    title: 'GitHub:',
-    url: 'https://github.com',
-  },
-  {
-    id: 'figma',
-    title: 'Figma:',
-    url: 'https://figma.com',
-  },
-];
-
 export const profileApi = {
-  getProfileData: async (): Promise<{ profile: UserProfile; projects: ProjectLink[] }> => {
+  getProfileData: async (): Promise<UserProfile> => {
     try {
       const response = await apiClient.get('/profile');
       return response.data;
     } catch {
-      // Fallback mock data matching design mockup
-      return {
-        profile: defaultProfile,
-        projects: defaultProjects,
-      };
+      // Fallback mock data khi Backend chưa kết nối
+      return defaultProfile;
     }
   },
 
@@ -56,4 +36,3 @@ export const profileApi = {
     }
   },
 };
-

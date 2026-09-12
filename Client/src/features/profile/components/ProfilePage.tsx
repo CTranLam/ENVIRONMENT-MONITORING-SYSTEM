@@ -5,33 +5,27 @@ import { ProfileInfoCard } from './ProfileInfoCard';
 import { MyProjectsCard } from './MyProjectsCard';
 
 export const ProfilePage: React.FC = () => {
-  const { profile, projects, isLoading, error } = useProfile();
+  const { profile, isLoading, error } = useProfile();
 
   return (
-    <div
-      style={{
-        maxWidth: 1100,
-        margin: '0 auto',
-        padding: '24px 16px',
-      }}
-    >
+    <div className="w-full max-w-[1400px] mx-auto py-4 px-2 box-border">
       {error && (
         <Alert
           message="Lỗi tải dữ liệu profile"
           description={error}
           type="error"
           showIcon
-          style={{ marginBottom: 20 }}
+          className="mb-6"
         />
       )}
 
-      <Row gutter={[24, 24]} align="stretch">
-        <Col xs={24} md={9} lg={8}>
+      <Row gutter={[32, 32]} align="stretch">
+        <Col xs={24} lg={10} xl={9}>
           <ProfileInfoCard profile={profile} loading={isLoading} />
         </Col>
 
-        <Col xs={24} md={15} lg={16}>
-          <MyProjectsCard projects={projects} loading={isLoading} />
+        <Col xs={24} lg={14} xl={15}>
+          <MyProjectsCard profile={profile} loading={isLoading} />
         </Col>
       </Row>
     </div>
@@ -39,4 +33,3 @@ export const ProfilePage: React.FC = () => {
 };
 
 export default ProfilePage;
-

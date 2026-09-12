@@ -1,6 +1,6 @@
 import React from 'react';
-import { Card, Typography } from 'antd';
-import { MailOutlined, EnvironmentOutlined } from '@ant-design/icons';
+import { Card, Typography, Avatar } from 'antd';
+import { MailOutlined, EnvironmentOutlined, UserOutlined } from '@ant-design/icons';
 import type { UserProfile } from '../types/profile.types';
 
 const { Title, Text } = Typography;
@@ -17,105 +17,55 @@ export const ProfileInfoCard: React.FC<ProfileInfoCardProps> = ({
   return (
     <Card
       loading={loading}
-      style={{
-        borderRadius: 20,
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.03)',
-        border: '1px solid #e2e8f0',
-        height: '100%',
-        padding: '16px 8px',
-      }}
+      className="!rounded-[24px] shadow-[0_6px_24px_rgba(0,0,0,0.04)] border border-slate-200 h-full py-7 px-4"
       bodyStyle={{
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
       }}
     >
-      {/* Green status indicator */}
-      <div
-        style={{
-          width: 10,
-          height: 10,
-          borderRadius: '50%',
-          backgroundColor: '#10b981',
-          marginBottom: 16,
-          boxShadow: '0 0 0 3px rgba(16, 185, 129, 0.2)',
-        }}
-      />
+      {/* Avatar Container: hỗ trợ avatarUrl từ DB hoặc icon mặc định */}
+      <div className="relative mb-5">
+        <Avatar
+          size={112}
+          src={profile?.avatarUrl || undefined}
+          icon={!profile?.avatarUrl ? <UserOutlined style={{ fontSize: 56, color: '#0099FF' }} /> : undefined}
+          className="!bg-[#f0f9ff] !border-[3px] !border-[#0099FF] shadow-[0_6px_18px_rgba(0,153,255,0.18)]"
+        />
+        {/* Pulsing online status indicator */}
+        <span className="status-dot-pulse absolute bottom-1 right-1.5 !w-4 !h-4 !bg-emerald-500 border-2 border-white shadow-[0_0_0_2px_rgba(16,185,129,0.2)]" />
+      </div>
 
-      {/* Name */}
+      {/* Full Name */}
       <Title
-        level={3}
-        style={{
-          margin: '0 0 4px 0',
-          fontWeight: 700,
-          color: '#0f172a',
-          textAlign: 'center',
-        }}
+        level={2}
+        className="!m-0 !mb-1.5 !font-bold !text-slate-900 text-center !text-[26px]"
       >
-        {profile?.name || 'Trần Quang Lâm'}
+        {profile?.fullName || 'Trần Quang Lâm'}
       </Title>
 
       {/* Role */}
-      <Text
-        style={{
-          color: '#10b981',
-          fontWeight: 700,
-          fontSize: 13,
-          letterSpacing: '0.8px',
-          textTransform: 'uppercase',
-          marginBottom: 6,
-        }}
-      >
+      <Text className="!text-emerald-500 !font-bold !text-sm tracking-wider uppercase mb-2">
         {profile?.role || 'SOFTWARE ENGINEER'}
       </Text>
 
       {/* Student ID / Code */}
-      <Text
-        style={{
-          color: '#94a3b8',
-          fontSize: 13,
-          fontWeight: 500,
-          marginBottom: 32,
-        }}
-      >
+      <Text className="!text-slate-500 !text-[15px] !font-semibold mb-9">
         {profile?.studentId || 'B23DCCN480'}
       </Text>
 
       {/* Email pill container */}
-      <div
-        style={{
-          width: '100%',
-          maxWidth: 300,
-          backgroundColor: '#f1f5f9',
-          borderRadius: 12,
-          padding: '10px 16px',
-          marginBottom: 12,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 12,
-        }}
-      >
-        <MailOutlined style={{ color: '#64748b', fontSize: 16 }} />
-        <Text style={{ color: '#334155', fontSize: 13, fontWeight: 500 }}>
-          {profile?.email || 'Chưa cập nhật email'}
+      <div className="w-full max-w-[360px] bg-slate-100 rounded-[14px] px-5 py-3.5 mb-4 flex items-center gap-3.5 transition-all">
+        <MailOutlined className="text-[#0099FF] text-lg" />
+        <Text className="!text-slate-700 text-sm font-medium">
+          {profile?.email || 'lamtq.work@gmail.com'}
         </Text>
       </div>
 
       {/* Location pill container */}
-      <div
-        style={{
-          width: '100%',
-          maxWidth: 300,
-          backgroundColor: '#f1f5f9',
-          borderRadius: 12,
-          padding: '10px 16px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 12,
-        }}
-      >
-        <EnvironmentOutlined style={{ color: '#64748b', fontSize: 16 }} />
-        <Text style={{ color: '#334155', fontSize: 13, fontWeight: 500 }}>
+      <div className="w-full max-w-[360px] bg-slate-100 rounded-[14px] px-5 py-3.5 flex items-center gap-3.5 transition-all">
+        <EnvironmentOutlined className="text-[#ef4444] text-lg" />
+        <Text className="!text-slate-700 text-sm font-medium">
           {profile?.location || 'Hanoi, Vietnam'}
         </Text>
       </div>
@@ -124,4 +74,3 @@ export const ProfileInfoCard: React.FC<ProfileInfoCardProps> = ({
 };
 
 export default ProfileInfoCard;
-

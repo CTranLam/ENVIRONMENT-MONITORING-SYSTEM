@@ -1,10 +1,9 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import type { ProfileState, UserProfile, ProjectLink } from '../types/profile.types';
+import type { ProfileState, UserProfile } from '../types/profile.types';
 import { profileApi } from '../services/profileApi';
 
 const initialState: ProfileState = {
   profile: null,
-  projects: [],
   isLoading: false,
   error: null,
 };
@@ -28,9 +27,6 @@ export const profileSlice = createSlice({
     setProfile: (state, action: PayloadAction<UserProfile>) => {
       state.profile = action.payload;
     },
-    setProjects: (state, action: PayloadAction<ProjectLink[]>) => {
-      state.projects = action.payload;
-    },
   },
   extraReducers: (builder) => {
     builder
@@ -38,10 +34,9 @@ export const profileSlice = createSlice({
         state.isLoading = true;
         state.error = null;
       })
-      .addCase(fetchProfileDataThunk.fulfilled, (state, action) => {
+      .addCase(fetchProfileDataThunk.fulfilled, (state, action: PayloadAction<UserProfile>) => {
         state.isLoading = false;
-        state.profile = action.payload.profile;
-        state.projects = action.payload.projects;
+        state.profile = action.payload;
       })
       .addCase(fetchProfileDataThunk.rejected, (state, action) => {
         state.isLoading = false;
@@ -50,6 +45,5 @@ export const profileSlice = createSlice({
   },
 });
 
-export const { setProfile, setProjects } = profileSlice.actions;
+export const { setProfile } = profileSlice.actions;
 export default profileSlice.reducer;
-

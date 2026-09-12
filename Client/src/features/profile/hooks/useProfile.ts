@@ -4,9 +4,7 @@ import { fetchProfileDataThunk } from '../slices/profileSlice';
 
 export const useProfile = () => {
   const dispatch = useAppDispatch();
-  const { profile, projects, isLoading, error } = useAppSelector(
-    (state) => state.profile
-  );
+  const { profile, isLoading, error } = useAppSelector((state) => state.profile);
 
   useEffect(() => {
     if (!profile) {
@@ -20,7 +18,6 @@ export const useProfile = () => {
 
   return {
     profile,
-    projects,
     isLoading,
     error,
     refresh,
@@ -28,4 +25,3 @@ export const useProfile = () => {
 };
 
 export default useProfile;
-

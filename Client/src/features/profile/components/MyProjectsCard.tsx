@@ -1,22 +1,45 @@
 import React from 'react';
 import { Card, Typography, Button } from 'antd';
 import { LinkOutlined } from '@ant-design/icons';
-import type { ProjectLink } from '../types/profile.types';
+import type { UserProfile } from '../types/profile.types';
 
 const { Title, Text } = Typography;
 
 interface MyProjectsCardProps {
-  projects: ProjectLink[];
+  profile: UserProfile | null;
   loading?: boolean;
 }
 
 export const MyProjectsCard: React.FC<MyProjectsCardProps> = ({
-  projects,
+  profile,
   loading = false,
 }) => {
+  const projectItems = [
+    {
+      id: 'iot-report',
+      title: 'IoT Project Report:',
+      url: profile?.iotReportUrl || '#',
+    },
+    {
+      id: 'api-docs',
+      title: 'API docs:',
+      url: profile?.apiDocsUrl || '#',
+    },
+    {
+      id: 'github',
+      title: 'GitHub:',
+      url: profile?.githubUrl || 'https://github.com',
+    },
+    {
+      id: 'figma',
+      title: 'Figma:',
+      url: profile?.figmaUrl || 'https://figma.com',
+    },
+  ];
+
   const handleOpenLink = (url: string) => {
     if (!url || url === '#') {
-      alert('Đường dẫn chưa được thiết lập!');
+      alert('Đường dẫn dự án chưa được thiết lập trong database!');
       return;
     }
     window.open(url, '_blank', 'noopener,noreferrer');
@@ -25,13 +48,7 @@ export const MyProjectsCard: React.FC<MyProjectsCardProps> = ({
   return (
     <Card
       loading={loading}
-      style={{
-        borderRadius: 20,
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.03)',
-        border: '1px solid #e2e8f0',
-        height: '100%',
-        padding: '16px 20px',
-      }}
+      className="!rounded-[24px] shadow-[0_6px_24px_rgba(0,0,0,0.04)] border border-slate-200 h-full py-7 px-6"
       bodyStyle={{
         display: 'flex',
         flexDirection: 'column',
@@ -39,59 +56,29 @@ export const MyProjectsCard: React.FC<MyProjectsCardProps> = ({
     >
       {/* Centered Card Title */}
       <Title
-        level={3}
-        style={{
-          textAlign: 'center',
-          fontWeight: 700,
-          color: '#0f172a',
-          margin: '0 0 28px 0',
-        }}
+        level={2}
+        className="!text-center !font-bold !text-slate-900 !m-0 !mb-8 !text-[26px]"
       >
         My Projects
       </Title>
 
-      {/* Project Link Rows */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-        {projects.map((item) => (
+      {/* 4 Project Link Rows từ Database */}
+      <div className="flex flex-col gap-[18px]">
+        {projectItems.map((item) => (
           <div
             key={item.id}
-            style={{
-              backgroundColor: '#f1f5f9',
-              borderRadius: 14,
-              padding: '12px 20px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              transition: 'all 0.2s ease',
-            }}
+            className="bg-slate-100 rounded-2xl px-6 py-4 flex items-center justify-between transition-all"
           >
-            <Text
-              style={{
-                fontSize: 14,
-                fontWeight: 600,
-                color: '#1e293b',
-              }}
-            >
+            <Text className="!text-base !font-semibold !text-slate-800">
               {item.title}
             </Text>
 
             <Button
               type="primary"
-              size="middle"
+              size="large"
               icon={<LinkOutlined />}
               onClick={() => handleOpenLink(item.url)}
-              style={{
-                backgroundColor: '#0f172a',
-                borderColor: '#0f172a',
-                borderRadius: 8,
-                fontWeight: 500,
-                fontSize: 13,
-                height: 36,
-                padding: '0 16px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-              }}
+              className="!bg-slate-900 hover:!bg-slate-800 !border-slate-900 !rounded-[10px] !font-semibold !text-sm !h-[42px] !px-[22px] flex items-center gap-2 shadow-md"
             >
               Link
             </Button>
@@ -103,4 +90,3 @@ export const MyProjectsCard: React.FC<MyProjectsCardProps> = ({
 };
 
 export default MyProjectsCard;
-

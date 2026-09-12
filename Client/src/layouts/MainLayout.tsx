@@ -1,15 +1,15 @@
 import React from 'react';
-import { Layout, Menu, Typography } from 'antd';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-
-const { Header, Content } = Layout;
-const { Text } = Typography;
+import { Avatar } from 'antd';
+import { UserOutlined } from '@ant-design/icons';
+import { useProfile } from '@/features/profile';
 
 export const MainLayout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { profile } = useProfile();
 
-  const tabItems = [
+  const navItems = [
     { key: '/dashboard', label: 'Dashboard' },
     { key: '/sensor-data', label: 'Sensor Data' },
     { key: '/action-history', label: 'Action History' },
@@ -19,62 +19,74 @@ export const MainLayout: React.FC = () => {
   const currentPath = location.pathname === '/' ? '/profile' : location.pathname;
 
   return (
-    <Layout style={{ minHeight: '100vh', backgroundColor: '#f5f7fa' }}>
-      {/* Top Header with Breadcrumb / Title */}
-      <div
-        style={{
-          padding: '12px 24px 4px 24px',
-          backgroundColor: '#fff',
-          borderBottom: '1px solid #f1f5f9',
-        }}
-      >
-        <Text type="secondary" style={{ fontSize: 13 }}>
-          {currentPath === '/profile'
-            ? 'Profile Page'
-            : currentPath.replace('/', '').toUpperCase()}
-        </Text>
-      </div>
+    <div className="min-h-screen flex flex-col bg-white w-full m-0 p-0">
+      {/* Shared Header with #0099FF, navigation cluster on the left, avatar on the right */}
+      <header className="w-full bg-[#0099FF] min-h-[70px] flex items-center justify-between px-7 box-border">
+        {/* Left: White cluster container holding all 4 navigation buttons */}
+        <nav className="nav-cluster-container">
+          {navItems.map((item) => {
+            const isActive = currentPath === item.key;
+            return (
+              <button
+                key={item.key}
+                onClick={() => navigate(item.key)}
+                className={`nav-cluster-btn ${isActive ? 'active' : ''}`}
+              >
+                {item.label}
+              </button>
+            );
+          })}
+        </nav>
 
-      {/* Tabs Navigation Bar matching mockup */}
-      <Header
-        style={{
-          backgroundColor: '#fff',
-          padding: '0 24px',
-          borderBottom: '1px solid #e2e8f0',
-          height: 48,
-          lineHeight: '48px',
-        }}
-      >
-        <Menu
-          mode="horizontal"
-          selectedKeys={[currentPath]}
-          items={tabItems}
-          onClick={({ key }) => navigate(key)}
-          style={{
-            borderBottom: 'none',
-            fontWeight: 600,
-            fontSize: 14,
-          }}
-        />
-      </Header>
-
-      {/* Main Content framed with light blue border as in mockup */}
-      <Content style={{ padding: '24px' }}>
+        {/* Right: User Avatar & Information */}
         <div
-          style={{
-            backgroundColor: '#f8fafc',
-            border: '1.5px solid #bfdbfe',
-            borderRadius: 16,
-            minHeight: 'calc(100vh - 150px)',
-            padding: '24px 16px',
-          }}
+          onClick={() => navigate('/profile')}
+          className="flex items-center gap-3 cursor-pointer py-1 pr-3.5 pl-1.5 rounded-full bg-white/20 hover:bg-white/30 transition-all select-none"
+          title="Xem trang Profile"
         >
-          <Outlet />
+          <Avatar
+            size={40}
+            src={profile?.avatarUrl || undefined}
+            icon={!profile?.avatarUrl ? <UserOutlined /> : undefined}
+            className="!bg-white !text-[#0099FF] font-bold shadow-sm"
+          />
+          <div className="flex flex-col text-left">
+            <span className="text-white font-semibold text-sm leading-[18px]">
+              {profile?.fullName || 'Trần Quang Lâm'}
+            </span>
+          </div>
         </div>
-      </Content>
-    </Layout>
+      </header>
+
+      {/* Main Content: full width, natural white background, aligned with header margins */}
+      <main className="flex-1 w-full bg-white px-7 py-6 box-border flex flex-col">
+        <Outlet />
+      </main>
+
+      {/* Shared Bottom / Footer full width with #0099FF - Lựa chọn 1 (Clean & Modern) */}
+      <footer className="w-full bg-[#0099FF] text-white px-8 py-3.5 flex items-center justify-between text-[13px] font-medium box-border flex-wrap gap-3">
+        {/* Bên trái: Tên hệ thống & năm */}
+        <div className="text-white/90">
+          © 2026 Environment Monitoring System (EMS)
+        </div>
+
+        {/* Ở giữa: Thông tin tác giả */}
+        <div className="text-white font-semibold">
+          Made by Tran Quang Lam — B23DCCN480
+        </div>
+
+        {/* Bên phải: Trạng thái hệ thống & phiên bản với chấm xanh nhấp nháy */}
+        <div className="flex items-center gap-2">
+          <span className="status-dot-pulse" />
+          <span>
+            System: <strong className="text-white font-bold">Online</strong>
+          </span>
+          <span className="opacity-60">|</span>
+          <span className="opacity-90">v1.0.0</span>
+        </div>
+      </footer>
+    </div>
   );
 };
 
 export default MainLayout;
-

@@ -1,22 +1,21 @@
 export interface UserProfile {
-  name: string;
-  role: string;
-  studentId: string;
+  id?: string;
+  username: string;
+  password?: string;
+  fullName: string;
   email: string;
-  location: string;
-  isOnline: boolean;
-}
-
-export interface ProjectLink {
-  id: string;
-  title: string;
-  url: string;
+  studentId: string;       
+  avatarUrl?: string;   
+  location?: string;       
+  role?: string;           
+  iotReportUrl?: string;   
+  apiDocsUrl?: string;     
+  githubUrl?: string;      
+  figmaUrl?: string;       
 }
 
 export interface ProfileState {
   profile: UserProfile | null;
-  projects: ProjectLink[];
   isLoading: boolean;
   error: string | null;
 }
-
