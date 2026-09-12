@@ -1,6 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { fetchProfileDataThunk } from '../slices/profileSlice';
+import { fetchProfileDataThunk, updateProfileThunk } from '../slices/profileSlice';
+import type { UserProfile } from '../types/profile.types';
 
 export const useProfile = () => {
   const dispatch = useAppDispatch();
@@ -12,15 +13,23 @@ export const useProfile = () => {
     }
   }, [dispatch, profile]);
 
-  const refresh = () => {
+  const refresh = useCallback(() => {
     dispatch(fetchProfileDataThunk());
-  };
+  }, [dispatch]);
+
+  const updateProfile = useCallback(
+    (patch: Partial<UserProfile>) => {
+      return dispatch(updateProfileThunk(patch));
+    },
+    [dispatch]
+  );
 
   return {
     profile,
     isLoading,
     error,
     refresh,
+    updateProfile,
   };
 };
 

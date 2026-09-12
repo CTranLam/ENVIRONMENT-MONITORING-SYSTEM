@@ -1,11 +1,17 @@
 import { configureStore } from '@reduxjs/toolkit';
 import { profileReducer } from '@/features/profile';
-import { dashboardReducer } from '@/features/dashboard/slices/dashboardSlice';
+import { dashboardReducer } from '@/features/dashboard';
+import { sensorDataReducer } from '@/features/monitoring';
+import { actionHistoryReducer } from '@/features/action-history';
+import { alertsReducer } from '@/features/alerts';
 
 export const store = configureStore({
   reducer: {
     profile: profileReducer,
     dashboard: dashboardReducer,
+    sensorData: sensorDataReducer,
+    actionHistory: actionHistoryReducer,
+    alerts: alertsReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

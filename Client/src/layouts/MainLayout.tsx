@@ -3,11 +3,13 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { Avatar } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
 import { useProfile } from '@/features/profile';
+import { useAlerts, AlertPopupModal } from '@/features/alerts';
 
 export const MainLayout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { profile } = useProfile();
+  const { isSystemOnline } = useAlerts();
 
   const navItems = [
     { key: '/dashboard', label: 'Dashboard' },
@@ -75,16 +77,30 @@ export const MainLayout: React.FC = () => {
           Made by Tran Quang Lam — B23DCCN480
         </div>
 
-        {/* Bên phải: Trạng thái hệ thống & phiên bản với chấm xanh nhấp nháy */}
-        <div className="flex items-center gap-2">
-          <span className="status-dot-pulse" />
-          <span>
-            System: <strong className="text-white font-bold">Online</strong>
-          </span>
+        {/* Bên phải: Trạng thái kết nối ESP8266 & phiên bản (Chỉ hiển thị trạng thái thực, không click) */}
+        <div className="flex items-center gap-2 select-none">
+          {isSystemOnline ? (
+            <>
+              <span className="status-dot-pulse" />
+              <span>
+                ESP8266: <strong className="text-white font-bold">Online</strong>
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="w-2.5 h-2.5 rounded-full bg-red-400 animate-ping" />
+              <span className="text-amber-200">
+                ESP8266: <strong className="font-bold underline">Offline</strong>
+              </span>
+            </>
+          )}
           <span className="opacity-60">|</span>
           <span className="opacity-90">v1.0.0</span>
         </div>
       </footer>
+
+      {/* Modal Popup Cảnh Báo Toàn Cục (Hiển thị chính giữa màn hình) */}
+      <AlertPopupModal />
     </div>
   );
 };

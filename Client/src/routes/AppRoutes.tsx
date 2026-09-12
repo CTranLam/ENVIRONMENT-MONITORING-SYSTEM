@@ -3,11 +3,8 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from '@/layouts/MainLayout';
 import { ProfilePage } from '@/features/profile';
 import { DashboardPage } from '@/features/dashboard';
-
-// Placeholder trắng cho các trang chưa phát triển
-const BlankPage: React.FC = () => {
-  return <div style={{ minHeight: '65vh', width: '100%', backgroundColor: '#ffffff' }} />;
-};
+import { SensorDataPage } from '@/features/monitoring';
+import { ActionHistoryPage } from '@/features/action-history';
 
 export const AppRoutes: React.FC = () => {
   return (
@@ -19,9 +16,11 @@ export const AppRoutes: React.FC = () => {
         {/* Trang Profile */}
         <Route path="/profile" element={<ProfilePage />} />
 
-        {/* 2 trang còn lại để trắng theo yêu cầu */}
-        <Route path="/sensor-data" element={<BlankPage />} />
-        <Route path="/action-history" element={<BlankPage />} />
+        {/* Trang Sensor Data */}
+        <Route path="/sensor-data" element={<SensorDataPage />} />
+
+        {/* Trang Action History */}
+        <Route path="/action-history" element={<ActionHistoryPage />} />
 
         {/* Default route */}
         <Route path="/" element={<Navigate to="/dashboard" replace />} />

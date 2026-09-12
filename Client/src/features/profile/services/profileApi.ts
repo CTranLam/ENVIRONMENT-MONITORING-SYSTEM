@@ -16,23 +16,36 @@ const defaultProfile: UserProfile = {
   figmaUrl: 'https://figma.com',
 };
 
+// Bộ nhớ cục bộ duy trì trạng thái chỉnh sửa trong phiên làm việc
+let currentProfileData: UserProfile = { ...defaultProfile };
+
 export const profileApi = {
   getProfileData: async (): Promise<UserProfile> => {
     try {
-      const response = await apiClient.get('/profile');
-      return response.data;
+      const response = await apiClient.get<UserProfile>('/profile');
+      if (response.data && typeof response.data === 'object') {
+        currentProfileData = { ...currentProfileData, ...response.data };
+        return currentProfileData;
+      }
+      return currentProfileData;
     } catch {
       // Fallback mock data khi Backend chưa kết nối
-      return defaultProfile;
+      return currentProfileData;
     }
   },
 
   updateProfile: async (data: Partial<UserProfile>): Promise<UserProfile> => {
     try {
-      const response = await apiClient.put('/profile', data);
-      return response.data;
+      const response = await apiClient.put<UserProfile>('/profile', data);
+      if (response.data && typeof response.data === 'object') {
+        currentProfileData = { ...currentProfileData, ...response.data };
+        return currentProfileData;
+      }
+      currentProfileData = { ...currentProfileData, ...data };
+      return currentProfileData;
     } catch {
-      return { ...defaultProfile, ...data };
+      currentProfileData = { ...currentProfileData, ...data };
+      return currentProfileData;
     }
   },
 };

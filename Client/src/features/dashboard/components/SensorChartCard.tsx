@@ -12,7 +12,9 @@ interface SensorChartCardProps {
   color: string;
   iconBg: string;
   icon: React.ReactNode;
-  threshold: number;
+  threshold?: number; // Tương thích ngược
+  maxThreshold?: number; // Đường ngưỡng trên (ví dụ: 37°C, 80%, 700 Lux)
+  minThreshold?: number; // Đường ngưỡng dưới (ví dụ: 15°C, 35%, 100 Lux)
   yMin: number;
   yMax: number;
   yTicks: number[];
@@ -51,6 +53,8 @@ export const SensorChartCard: React.FC<SensorChartCardProps> = ({
   iconBg,
   icon,
   threshold,
+  maxThreshold,
+  minThreshold,
   yMin,
   yMax,
   yTicks,
@@ -77,9 +81,18 @@ export const SensorChartCard: React.FC<SensorChartCardProps> = ({
 
   const curvePath = generateSmoothPath(points);
 
-  // Tính tọa độ Y của đường ngưỡng đứt đoạn (Threshold line)
-  const thresholdY =
-    paddingTop + (1 - (threshold - yMin) / (yMax - yMin)) * chartHeight;
+  // Tính tọa độ Y của đường ngưỡng trên (Max Threshold)
+  const effectiveMax = maxThreshold ?? threshold;
+  const maxThresholdY =
+    effectiveMax !== undefined && effectiveMax >= yMin && effectiveMax <= yMax
+      ? paddingTop + (1 - (effectiveMax - yMin) / (yMax - yMin)) * chartHeight
+      : undefined;
+
+  // Tính tọa độ Y của đường ngưỡng dưới (Min Threshold)
+  const minThresholdY =
+    minThreshold !== undefined && minThreshold >= yMin && minThreshold <= yMax
+      ? paddingTop + (1 - (minThreshold - yMin) / (yMax - yMin)) * chartHeight
+      : undefined;
 
   return (
     <div className="bg-white rounded-[24px] border-[1.5px] border-solid border-[#e2e8f0] px-5 py-4 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex items-center gap-4 w-full box-border flex-1 min-h-[180px]">
@@ -134,17 +147,33 @@ export const SensorChartCard: React.FC<SensorChartCardProps> = ({
             );
           })}
 
-          {/* Đường nét đứt hiển thị ngưỡng (Threshold Line) */}
-          <line
-            x1={paddingLeft}
-            y1={thresholdY}
-            x2={svgWidth - paddingRight}
-            y2={thresholdY}
-            stroke={color}
-            strokeWidth={1.5}
-            strokeDasharray="4 4"
-            strokeOpacity={0.65}
-          />
+          {/* Đường nét đứt hiển thị NGƯỠNG TRÊN (Max Threshold Line) */}
+          {maxThresholdY !== undefined && (
+            <line
+              x1={paddingLeft}
+              y1={maxThresholdY}
+              x2={svgWidth - paddingRight}
+              y2={maxThresholdY}
+              stroke="#ef4444"
+              strokeWidth={1.5}
+              strokeDasharray="5 4"
+              strokeOpacity={0.85}
+            />
+          )}
+
+          {/* Đường nét đứt hiển thị NGƯỠNG DƯỚI (Min Threshold Line) */}
+          {minThresholdY !== undefined && (
+            <line
+              x1={paddingLeft}
+              y1={minThresholdY}
+              x2={svgWidth - paddingRight}
+              y2={minThresholdY}
+              stroke="#3b82f6"
+              strokeWidth={1.5}
+              strokeDasharray="5 4"
+              strokeOpacity={0.85}
+            />
+          )}
 
           {/* Đường cong dữ liệu mềm mại (Spline curve) */}
           <path
@@ -171,7 +200,6 @@ export const SensorChartCard: React.FC<SensorChartCardProps> = ({
           {/* Trục X: Các mốc thời gian bên dưới */}
           {data.map((pt, i) => {
             const x = paddingLeft + (i / Math.max(1, data.length - 1)) * chartWidth;
-            // Chỉ hiển thị nhãn thời gian xen kẽ hoặc chia đều để không bị đè nhau
             const showLabel = i % 2 === 0 || i === data.length - 1;
             if (!showLabel) return null;
 
@@ -196,4 +224,3 @@ export const SensorChartCard: React.FC<SensorChartCardProps> = ({
 };
 
 export default SensorChartCard;
-

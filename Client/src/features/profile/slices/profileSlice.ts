@@ -1,4 +1,5 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { message } from 'antd';
 import type { ProfileState, UserProfile } from '../types/profile.types';
 import { profileApi } from '../services/profileApi';
 
@@ -15,6 +16,21 @@ export const fetchProfileDataThunk = createAsyncThunk(
       return await profileApi.getProfileData();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Không thể tải thông tin profile';
+      return rejectWithValue(msg);
+    }
+  }
+);
+
+export const updateProfileThunk = createAsyncThunk(
+  'profile/updateData',
+  async (patch: Partial<UserProfile>, { rejectWithValue }) => {
+    try {
+      const updated = await profileApi.updateProfile(patch);
+      message.success('Cập nhật thông tin thành công!');
+      return updated;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Không thể cập nhật thông tin';
+      message.error(msg);
       return rejectWithValue(msg);
     }
   }
@@ -41,6 +57,9 @@ export const profileSlice = createSlice({
       .addCase(fetchProfileDataThunk.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
+      })
+      .addCase(updateProfileThunk.fulfilled, (state, action: PayloadAction<UserProfile>) => {
+        state.profile = action.payload;
       });
   },
 });

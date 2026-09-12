@@ -47,15 +47,15 @@ const initialHumidityPoints: SensorPoint[] = [
 ];
 
 const initialLightPoints: SensorPoint[] = [
-  { time: '12:00:00', value: 5 },
-  { time: '12:00:02', value: 6 },
-  { time: '12:00:04', value: 8 },
-  { time: '12:00:06', value: 28 },
-  { time: '12:00:08', value: 25 },
-  { time: '12:00:10', value: 32 },
-  { time: '12:00:12', value: 34 },
-  { time: '12:00:14', value: 38 },
-  { time: '12:00:16', value: 40 },
+  { time: '12:00:00', value: 125 },
+  { time: '12:00:02', value: 150 },
+  { time: '12:00:04', value: 200 },
+  { time: '12:00:06', value: 700 },
+  { time: '12:00:08', value: 625 },
+  { time: '12:00:10', value: 800 },
+  { time: '12:00:12', value: 850 },
+  { time: '12:00:14', value: 950 },
+  { time: '12:00:16', value: 1000 },
 ];
 
 const initialState: DashboardState = {
@@ -128,7 +128,7 @@ export const dashboardSlice = createSlice({
       // Thêm điểm mới vào mảng và trượt mảng giữ tối đa 10 điểm
       state.tempData = [...state.tempData.slice(1), { time, value: temperature }];
       state.humidityData = [...state.humidityData.slice(1), { time, value: humidity }];
-      state.lightData = [...state.lightData.slice(1), { time, value: light }];
+      state.lightData = [...state.lightData.slice(1), { time, value: Math.round(light * 25) }];
     },
   },
   extraReducers: (builder) => {

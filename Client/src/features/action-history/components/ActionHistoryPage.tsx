@@ -1,10 +1,10 @@
 import React from 'react';
-import { useSensorData } from '../hooks/useSensorData';
-import { SensorDataFilterBar } from './SensorDataFilterBar';
-import { SensorDataTable } from './SensorDataTable';
-import { SensorDataPagination } from './SensorDataPagination';
+import { useActionHistory } from '../hooks/useActionHistory';
+import { ActionHistoryFilterBar } from './ActionHistoryFilterBar';
+import { ActionHistoryTable } from './ActionHistoryTable';
+import { ActionHistoryPagination } from './ActionHistoryPagination';
 
-export const SensorDataPage: React.FC = () => {
+export const ActionHistoryPage: React.FC = () => {
   const {
     items,
     total,
@@ -16,26 +16,29 @@ export const SensorDataPage: React.FC = () => {
     endEntry,
     currentSortKey,
     handleSearchChange,
-    handleTypeChange,
+    handleDeviceChange,
+    handleActionChange,
     handleSortSelect,
     handleColumnSort,
     handlePageChange,
-  } = useSensorData();
+  } = useActionHistory();
 
   return (
     <div className="w-full mx-auto p-0 box-border flex flex-col my-auto">
-      {/* 1. Bộ lọc: Search Bar & Type/Sort Selectors */}
-      <SensorDataFilterBar
+      {/* 1. Bộ lọc: Search Bar & Device/Action/Sort Selectors */}
+      <ActionHistoryFilterBar
         searchInput={searchInput}
         onSearchChange={handleSearchChange}
-        selectedType={filters.type}
-        onTypeChange={handleTypeChange}
+        selectedDevice={filters.device}
+        onDeviceChange={handleDeviceChange}
+        selectedAction={filters.action}
+        onActionChange={handleActionChange}
         selectedSortKey={currentSortKey}
         onSortSelect={handleSortSelect}
       />
 
-      {/* 2. Bảng dữ liệu cảm biến (Dark Navy Header, UUID v7, Column Sort Buttons) */}
-      <SensorDataTable
+      {/* 2. Bảng dữ liệu lịch sử điều khiển 5 cột (Dark Navy Header, UUID v7, Badges, Column Sort) */}
+      <ActionHistoryTable
         records={items}
         loading={loading}
         sortBy={filters.sortBy}
@@ -44,7 +47,7 @@ export const SensorDataPage: React.FC = () => {
       />
 
       {/* 3. Thanh phân trang (Showing X to Y of Z & Page Buttons) */}
-      <SensorDataPagination
+      <ActionHistoryPagination
         currentPage={filters.page}
         totalPages={totalPages}
         totalEntries={total}
@@ -56,4 +59,5 @@ export const SensorDataPage: React.FC = () => {
   );
 };
 
-export default SensorDataPage;
+export default ActionHistoryPage;
+
