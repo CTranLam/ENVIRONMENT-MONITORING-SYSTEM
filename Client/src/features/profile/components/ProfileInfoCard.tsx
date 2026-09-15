@@ -10,14 +10,17 @@ import {
   CameraOutlined,
   UploadOutlined,
 } from '@ant-design/icons';
-import type { UserProfile } from '../types/profile.types';
+import type {
+  UpdateProfileRequest,
+  UserProfile,
+} from '@/features/profile/types/profile.types';
 
 const { Title, Text } = Typography;
 
 interface ProfileInfoCardProps {
   profile: UserProfile | null;
   loading?: boolean;
-  onUpdateProfile?: (patch: Partial<UserProfile>) => void;
+  onUpdateProfile?: (patch: UpdateProfileRequest) => void;
 }
 
 // Nén và chuyển ảnh sang kích thước tối ưu cho avatar (max 400x400)
@@ -79,7 +82,8 @@ export const ProfileInfoCard: React.FC<ProfileInfoCardProps> = ({
 
   const handleSaveEdit = () => {
     if (editingField && onUpdateProfile) {
-      onUpdateProfile({ [editingField]: editValue.trim() });
+      const patch: UpdateProfileRequest = { [editingField]: editValue.trim() };
+      onUpdateProfile(patch);
     }
     setEditingField(null);
   };

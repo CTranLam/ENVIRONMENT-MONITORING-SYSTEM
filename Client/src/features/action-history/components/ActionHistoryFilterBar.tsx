@@ -1,16 +1,21 @@
 import React from 'react';
 import { Input, Select } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
+import type {
+  ActionHistoryActionFilter,
+  ActionHistoryDeviceFilter,
+  ActionHistorySortKey,
+} from '@/features/action-history/types/action-history.types';
 
 interface ActionHistoryFilterBarProps {
   searchInput: string;
   onSearchChange: (value: string) => void;
-  selectedDevice: string;
-  onDeviceChange: (value: string) => void;
-  selectedAction: string;
-  onActionChange: (value: string) => void;
-  selectedSortKey: string;
-  onSortSelect: (key: string) => void;
+  selectedDevice: ActionHistoryDeviceFilter;
+  onDeviceChange: (value: ActionHistoryDeviceFilter) => void;
+  selectedAction: ActionHistoryActionFilter;
+  onActionChange: (value: ActionHistoryActionFilter) => void;
+  selectedSortKey: ActionHistorySortKey;
+  onSortSelect: (key: ActionHistorySortKey) => void;
 }
 
 export const ActionHistoryFilterBar: React.FC<ActionHistoryFilterBarProps> = ({
@@ -46,11 +51,13 @@ export const ActionHistoryFilterBar: React.FC<ActionHistoryFilterBarProps> = ({
           </span>
           <Select
             value={selectedDevice}
-            onChange={onDeviceChange}
+            onChange={(value) => onDeviceChange(value as ActionHistoryDeviceFilter)}
             className="w-[160px] [&_.ant-select-selector]:!rounded-full [&_.ant-select-selector]:!border-solid [&_.ant-select-selector]:!border-slate-300 [&_.ant-select-selector]:!min-h-[40px] [&_.ant-select-selection-item]:!leading-[38px] text-[14.5px]"
             options={[
               { value: 'all', label: 'All Devices' },
               { value: 'coolingFan', label: 'Cooling Fan' },
+              { value: 'mistingSystem', label: 'Misting System' },
+              { value: 'ventilationFan', label: 'Ventilation Fan' },
               { value: 'light', label: 'Light' },
             ]}
           />
@@ -63,7 +70,7 @@ export const ActionHistoryFilterBar: React.FC<ActionHistoryFilterBarProps> = ({
           </span>
           <Select
             value={selectedAction}
-            onChange={onActionChange}
+            onChange={(value) => onActionChange(value as ActionHistoryActionFilter)}
             className="w-[125px] [&_.ant-select-selector]:!rounded-full [&_.ant-select-selector]:!border-solid [&_.ant-select-selector]:!border-slate-300 [&_.ant-select-selector]:!min-h-[40px] [&_.ant-select-selection-item]:!leading-[38px] text-[14.5px]"
             options={[
               { value: 'all', label: 'All' },
@@ -80,7 +87,7 @@ export const ActionHistoryFilterBar: React.FC<ActionHistoryFilterBarProps> = ({
           </span>
           <Select
             value={selectedSortKey}
-            onChange={onSortSelect}
+            onChange={(value) => onSortSelect(value as ActionHistorySortKey)}
             className="w-[195px] [&_.ant-select-selector]:!rounded-full [&_.ant-select-selector]:!border-solid [&_.ant-select-selector]:!border-slate-300 [&_.ant-select-selector]:!min-h-[40px] [&_.ant-select-selection-item]:!leading-[38px] text-[14.5px]"
             options={[
               { value: 'timestamp_desc', label: 'Newest First' },
@@ -100,4 +107,3 @@ export const ActionHistoryFilterBar: React.FC<ActionHistoryFilterBarProps> = ({
     </div>
   );
 };
-

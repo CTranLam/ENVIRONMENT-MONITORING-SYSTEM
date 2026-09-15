@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import {
   fetchSensorDataThunk,
@@ -6,27 +6,26 @@ import {
   setTypeFilter,
   setSorting,
   setPage,
-} from '../slices/sensorDataSlice';
-import type { SortField, SortOrder, SensorType } from '../types/sensor-data.types';
+} from '@/features/monitoring/slices/sensorDataSlice';
+import type {
+  SensorFilterType,
+  SensorSortKey,
+  SortField,
+  SortOrder,
+} from '@/features/monitoring/types/sensor-data.types';
 
 export const useSensorData = () => {
   const dispatch = useAppDispatch();
-  const { items, total, loading, error, filters } = useAppSelector(
+  const { items, total, isLoading, filters } = useAppSelector(
     (state) => state.sensorData
   );
 
-  // An toàn dữ liệu
-  const safeItems = Array.isArray(items) ? items : [];
-  const safeTotal = typeof total === 'number' && !isNaN(total) ? total : 0;
-  const safePage = typeof filters?.page === 'number' && !isNaN(filters.page) ? filters.page : 1;
-  const safePageSize =
-    typeof filters?.pageSize === 'number' && !isNaN(filters.pageSize) && filters.pageSize > 0
-      ? filters.pageSize
-      : 10;
-
-  // Local state cho search input để phản hồi gõ tức thì
-  const [searchInput, setSearchInput] = useState(filters?.search || '');
+  const [searchInput, setSearchInput] = useState(filters.search);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    setSearchInput(filters.search);
+  }, [filters.search]);
 
   // Debounce search input sang Redux
   const handleSearchChange = useCallback(
@@ -44,15 +43,15 @@ export const useSensorData = () => {
 
   // Xử lý đổi filter loại cảm biến
   const handleTypeChange = useCallback(
-    (value: string) => {
-      dispatch(setTypeFilter(value as 'all' | SensorType));
+    (value: SensorFilterType) => {
+      dispatch(setTypeFilter(value));
     },
     [dispatch]
   );
 
   // Xử lý đổi tiêu chí sắp xếp từ Sort dropdown
   const handleSortSelect = useCallback(
-    (sortKey: string) => {
+    (sortKey: SensorSortKey) => {
       const [field, order] = sortKey.split('_') as [SortField, SortOrder];
       if (field && order) {
         dispatch(setSorting({ sortBy: field, sortOrder: order }));
@@ -64,15 +63,15 @@ export const useSensorData = () => {
   // Xử lý click trực tiếp vào header của cột để đảo chiều sort
   const handleColumnSort = useCallback(
     (field: SortField) => {
-      if (filters?.sortBy === field) {
-        const newOrder: SortOrder = filters?.sortOrder === 'asc' ? 'desc' : 'asc';
+      if (filters.sortBy === field) {
+        const newOrder: SortOrder = filters.sortOrder === 'asc' ? 'desc' : 'asc';
         dispatch(setSorting({ sortBy: field, sortOrder: newOrder }));
       } else {
         const defaultOrder: SortOrder = field === 'name' || field === 'id' ? 'asc' : 'desc';
         dispatch(setSorting({ sortBy: field, sortOrder: defaultOrder }));
       }
     },
-    [dispatch, filters?.sortBy, filters?.sortOrder]
+    [dispatch, filters.sortBy, filters.sortOrder]
   );
 
   // Xử lý chuyển trang
@@ -85,15 +84,10 @@ export const useSensorData = () => {
 
   // Fetch dữ liệu mỗi khi filter thay đổi
   useEffect(() => {
-    dispatch(fetchSensorDataThunk());
+    dispatch(fetchSensorDataThunk(filters));
   }, [
     dispatch,
-    filters?.search,
-    filters?.type,
-    filters?.sortBy,
-    filters?.sortOrder,
-    filters?.page,
-    filters?.pageSize,
+    filters,
   ]);
 
   // Clean timer khi unmount
@@ -105,19 +99,17 @@ export const useSensorData = () => {
     };
   }, []);
 
-  // Tính toán hiển thị phân trang an toàn, chống NaN tuyệt đối
-  const totalPages = Math.max(1, Math.ceil(safeTotal / safePageSize));
-  const startEntry = safeTotal === 0 ? 0 : (safePage - 1) * safePageSize + 1;
-  const endEntry = Math.min(safePage * safePageSize, safeTotal);
+  const totalPages = Math.max(1, Math.ceil(total / filters.pageSize));
+  const startEntry = total === 0 ? 0 : (filters.page - 1) * filters.pageSize + 1;
+  const endEntry = Math.min(filters.page * filters.pageSize, total);
 
   // Chuỗi key cho Sort dropdown hiện tại
-  const currentSortKey = `${filters?.sortBy || 'timestamp'}_${filters?.sortOrder || 'desc'}`;
+  const currentSortKey: SensorSortKey = `${filters.sortBy}_${filters.sortOrder}`;
 
   return {
-    items: safeItems,
-    total: safeTotal,
-    loading: Boolean(loading),
-    error,
+    items,
+    total,
+    isLoading,
     filters,
     searchInput,
     totalPages,

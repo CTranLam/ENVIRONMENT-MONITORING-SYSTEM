@@ -1,39 +1,25 @@
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { message } from 'antd';
-import type { ProfileState, UserProfile } from '../types/profile.types';
-import { profileApi } from '../services/profileApi';
+import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import { profileApi } from '@/features/profile/services/profileApi';
+import type {
+  ProfileState,
+  UpdateProfileRequest,
+  UserProfile,
+} from '@/features/profile/types/profile.types';
 
 const initialState: ProfileState = {
   profile: null,
   isLoading: false,
-  error: null,
+  isUpdating: false,
 };
 
-export const fetchProfileDataThunk = createAsyncThunk(
-  'profile/fetchData',
-  async (_, { rejectWithValue }) => {
-    try {
-      return await profileApi.getProfileData();
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Không thể tải thông tin profile';
-      return rejectWithValue(msg);
-    }
-  }
+export const fetchProfileThunk = createAsyncThunk<UserProfile>(
+  'profile/fetch',
+  () => profileApi.getProfile(),
 );
 
-export const updateProfileThunk = createAsyncThunk(
-  'profile/updateData',
-  async (patch: Partial<UserProfile>, { rejectWithValue }) => {
-    try {
-      const updated = await profileApi.updateProfile(patch);
-      message.success('Cập nhật thông tin thành công!');
-      return updated;
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Không thể cập nhật thông tin';
-      message.error(msg);
-      return rejectWithValue(msg);
-    }
-  }
+export const updateProfileThunk = createAsyncThunk<UserProfile, UpdateProfileRequest>(
+  'profile/update',
+  (patch) => profileApi.updateProfile(patch),
 );
 
 export const profileSlice = createSlice({
@@ -46,20 +32,25 @@ export const profileSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchProfileDataThunk.pending, (state) => {
+      .addCase(fetchProfileThunk.pending, (state) => {
         state.isLoading = true;
-        state.error = null;
       })
-      .addCase(fetchProfileDataThunk.fulfilled, (state, action: PayloadAction<UserProfile>) => {
+      .addCase(fetchProfileThunk.fulfilled, (state, action: PayloadAction<UserProfile>) => {
         state.isLoading = false;
         state.profile = action.payload;
       })
-      .addCase(fetchProfileDataThunk.rejected, (state, action) => {
+      .addCase(fetchProfileThunk.rejected, (state) => {
         state.isLoading = false;
-        state.error = action.payload as string;
+      })
+      .addCase(updateProfileThunk.pending, (state) => {
+        state.isUpdating = true;
       })
       .addCase(updateProfileThunk.fulfilled, (state, action: PayloadAction<UserProfile>) => {
+        state.isUpdating = false;
         state.profile = action.payload;
+      })
+      .addCase(updateProfileThunk.rejected, (state) => {
+        state.isUpdating = false;
       });
   },
 });

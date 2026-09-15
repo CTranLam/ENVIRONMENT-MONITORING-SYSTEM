@@ -1,22 +1,14 @@
-import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit';
+import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import { actionHistoryApi } from '@/features/action-history/services/actionHistoryApi';
 import type {
-  ActionHistoryRecord,
   ActionHistoryFilters,
   PaginatedActionHistoryResponse,
+  ActionHistoryState,
   ActionSortField,
   ActionSortOrder,
-  DeviceType,
-  DeviceAction,
-} from '../types/action-history.types';
-import { actionHistoryApi } from '../services/actionHistoryApi';
-
-export interface ActionHistoryState {
-  items: ActionHistoryRecord[];
-  total: number;
-  loading: boolean;
-  error: string | null;
-  filters: ActionHistoryFilters;
-}
+  ActionHistoryActionFilter,
+  ActionHistoryDeviceFilter,
+} from '@/features/action-history/types/action-history.types';
 
 const initialFilters: ActionHistoryFilters = {
   search: '',
@@ -31,32 +23,14 @@ const initialFilters: ActionHistoryFilters = {
 const initialState: ActionHistoryState = {
   items: [],
   total: 0,
-  loading: false,
-  error: null,
+  isLoading: false,
   filters: initialFilters,
 };
 
-/**
- * Async thunk truy vấn lịch sử điều khiển thiết bị
- */
 export const fetchActionHistoryThunk = createAsyncThunk<
   PaginatedActionHistoryResponse,
-  Partial<ActionHistoryFilters> | undefined,
-  { state: { actionHistory: ActionHistoryState } }
->('actionHistory/fetchActionHistory', async (overrideFilters, { getState, rejectWithValue }) => {
-  try {
-    const currentFilters = getState().actionHistory.filters;
-    const mergedFilters: ActionHistoryFilters = {
-      ...currentFilters,
-      ...overrideFilters,
-    };
-    const response = await actionHistoryApi.getActionHistory(mergedFilters);
-    return response;
-  } catch (error: unknown) {
-    const err = error as Error;
-    return rejectWithValue(err.message || 'Không thể tải lịch sử điều khiển');
-  }
-});
+  ActionHistoryFilters
+>('actionHistory/fetch', (filters) => actionHistoryApi.getHistory(filters));
 
 export const actionHistorySlice = createSlice({
   name: 'actionHistory',
@@ -66,11 +40,11 @@ export const actionHistorySlice = createSlice({
       state.filters.search = action.payload;
       state.filters.page = 1;
     },
-    setDeviceFilter: (state, action: PayloadAction<'all' | DeviceType>) => {
+    setDeviceFilter: (state, action: PayloadAction<ActionHistoryDeviceFilter>) => {
       state.filters.device = action.payload;
       state.filters.page = 1;
     },
-    setActionFilter: (state, action: PayloadAction<'all' | DeviceAction>) => {
+    setActionFilter: (state, action: PayloadAction<ActionHistoryActionFilter>) => {
       state.filters.action = action.payload;
       state.filters.page = 1;
     },
@@ -80,35 +54,31 @@ export const actionHistorySlice = createSlice({
     ) => {
       state.filters.sortBy = action.payload.sortBy;
       state.filters.sortOrder = action.payload.sortOrder;
+      state.filters.page = 1;
     },
     setPage: (state, action: PayloadAction<number>) => {
-      state.filters.page = action.payload;
+      state.filters.page = Number.isInteger(action.payload)
+        ? Math.max(1, action.payload)
+        : 1;
     },
     resetFilters: (state) => {
-      state.filters = initialFilters;
+      state.filters = { ...initialFilters };
     },
   },
   extraReducers: (builder) => {
     builder
       .addCase(fetchActionHistoryThunk.pending, (state) => {
-        state.loading = true;
-        state.error = null;
+        state.isLoading = true;
       })
-      .addCase(fetchActionHistoryThunk.fulfilled, (state, action) => {
-        state.loading = false;
-        if (action.payload && Array.isArray(action.payload.items)) {
-          state.items = action.payload.items;
-          state.total = typeof action.payload.total === 'number' ? action.payload.total : action.payload.items.length;
-          state.filters.page = action.payload.page || 1;
-          state.filters.pageSize = action.payload.pageSize || 10;
-        } else {
-          state.items = [];
-          state.total = 0;
-        }
+      .addCase(fetchActionHistoryThunk.fulfilled, (state, action: PayloadAction<PaginatedActionHistoryResponse>) => {
+        state.isLoading = false;
+        state.items = action.payload.items;
+        state.total = action.payload.total;
+        state.filters.page = action.payload.page;
+        state.filters.pageSize = action.payload.pageSize;
       })
-      .addCase(fetchActionHistoryThunk.rejected, (state, action) => {
-        state.loading = false;
-        state.error = (action.payload as string) || action.error.message || 'Lỗi tải lịch sử';
+      .addCase(fetchActionHistoryThunk.rejected, (state) => {
+        state.isLoading = false;
       });
   },
 });
@@ -123,4 +93,3 @@ export const {
 } = actionHistorySlice.actions;
 
 export const actionHistoryReducer = actionHistorySlice.reducer;
-

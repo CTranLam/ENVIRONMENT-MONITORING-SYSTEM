@@ -1,20 +1,22 @@
 import React from 'react';
 import { Typography } from 'antd';
-import type { SensorPoint } from '../types/dashboard.types';
+import type {
+  SensorMetric,
+  SensorPoint,
+} from '@/features/dashboard/types/dashboard.types';
 
 const { Text } = Typography;
 
 interface SensorChartCardProps {
-  type: 'temperature' | 'humidity' | 'light';
+  type: SensorMetric;
   title: string;
   unit: string;
-  currentValue: number | string;
+  currentValue: number;
   color: string;
   iconBg: string;
   icon: React.ReactNode;
-  threshold?: number; // Tương thích ngược
-  maxThreshold?: number; // Đường ngưỡng trên (ví dụ: 37°C, 80%, 700 Lux)
-  minThreshold?: number; // Đường ngưỡng dưới (ví dụ: 15°C, 35%, 100 Lux)
+  maxThreshold?: number;
+  minThreshold?: number;
   yMin: number;
   yMax: number;
   yTicks: number[];
@@ -52,7 +54,6 @@ export const SensorChartCard: React.FC<SensorChartCardProps> = ({
   color,
   iconBg,
   icon,
-  threshold,
   maxThreshold,
   minThreshold,
   yMin,
@@ -82,10 +83,9 @@ export const SensorChartCard: React.FC<SensorChartCardProps> = ({
   const curvePath = generateSmoothPath(points);
 
   // Tính tọa độ Y của đường ngưỡng trên (Max Threshold)
-  const effectiveMax = maxThreshold ?? threshold;
   const maxThresholdY =
-    effectiveMax !== undefined && effectiveMax >= yMin && effectiveMax <= yMax
-      ? paddingTop + (1 - (effectiveMax - yMin) / (yMax - yMin)) * chartHeight
+    maxThreshold !== undefined && maxThreshold >= yMin && maxThreshold <= yMax
+      ? paddingTop + (1 - (maxThreshold - yMin) / (yMax - yMin)) * chartHeight
       : undefined;
 
   // Tính tọa độ Y của đường ngưỡng dưới (Min Threshold)

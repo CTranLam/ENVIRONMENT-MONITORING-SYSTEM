@@ -1,21 +1,13 @@
-import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit';
+import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import { sensorDataApi } from '@/features/monitoring/services/sensorDataApi';
 import type {
-  SensorDataRecord,
   SensorDataFilters,
   PaginatedSensorDataResponse,
+  SensorDataState,
   SortField,
   SortOrder,
-  SensorType,
-} from '../types/sensor-data.types';
-import { sensorDataApi } from '../services/sensorDataApi';
-
-export interface SensorDataState {
-  items: SensorDataRecord[];
-  total: number;
-  loading: boolean;
-  error: string | null;
-  filters: SensorDataFilters;
-}
+  SensorFilterType,
+} from '@/features/monitoring/types/sensor-data.types';
 
 const initialFilters: SensorDataFilters = {
   search: '',
@@ -29,32 +21,14 @@ const initialFilters: SensorDataFilters = {
 const initialState: SensorDataState = {
   items: [],
   total: 0,
-  loading: false,
-  error: null,
+  isLoading: false,
   filters: initialFilters,
 };
 
-/**
- * Async thunk truy vấn dữ liệu cảm biến
- */
 export const fetchSensorDataThunk = createAsyncThunk<
   PaginatedSensorDataResponse,
-  Partial<SensorDataFilters> | undefined,
-  { state: { sensorData: SensorDataState } }
->('sensorData/fetchSensorData', async (overrideFilters, { getState, rejectWithValue }) => {
-  try {
-    const currentFilters = getState().sensorData.filters;
-    const mergedFilters: SensorDataFilters = {
-      ...currentFilters,
-      ...overrideFilters,
-    };
-    const response = await sensorDataApi.getSensorData(mergedFilters);
-    return response;
-  } catch (error: unknown) {
-    const err = error as Error;
-    return rejectWithValue(err.message || 'Không thể tải dữ liệu cảm biến');
-  }
-});
+  SensorDataFilters
+>('sensorData/fetch', (filters) => sensorDataApi.getHistory(filters));
 
 export const sensorDataSlice = createSlice({
   name: 'sensorData',
@@ -64,7 +38,7 @@ export const sensorDataSlice = createSlice({
       state.filters.search = action.payload;
       state.filters.page = 1; // Reset về trang 1 khi tìm kiếm
     },
-    setTypeFilter: (state, action: PayloadAction<'all' | SensorType>) => {
+    setTypeFilter: (state, action: PayloadAction<SensorFilterType>) => {
       state.filters.type = action.payload;
       state.filters.page = 1; // Reset về trang 1 khi lọc loại
     },
@@ -74,35 +48,31 @@ export const sensorDataSlice = createSlice({
     ) => {
       state.filters.sortBy = action.payload.sortBy;
       state.filters.sortOrder = action.payload.sortOrder;
+      state.filters.page = 1;
     },
     setPage: (state, action: PayloadAction<number>) => {
-      state.filters.page = action.payload;
+      state.filters.page = Number.isInteger(action.payload)
+        ? Math.max(1, action.payload)
+        : 1;
     },
     resetFilters: (state) => {
-      state.filters = initialFilters;
+      state.filters = { ...initialFilters };
     },
   },
   extraReducers: (builder) => {
     builder
       .addCase(fetchSensorDataThunk.pending, (state) => {
-        state.loading = true;
-        state.error = null;
+        state.isLoading = true;
       })
-      .addCase(fetchSensorDataThunk.fulfilled, (state, action) => {
-        state.loading = false;
-        if (action.payload && Array.isArray(action.payload.items)) {
-          state.items = action.payload.items;
-          state.total = typeof action.payload.total === 'number' ? action.payload.total : action.payload.items.length;
-          state.filters.page = action.payload.page || 1;
-          state.filters.pageSize = action.payload.pageSize || 10;
-        } else {
-          state.items = [];
-          state.total = 0;
-        }
+      .addCase(fetchSensorDataThunk.fulfilled, (state, action: PayloadAction<PaginatedSensorDataResponse>) => {
+        state.isLoading = false;
+        state.items = action.payload.items;
+        state.total = action.payload.total;
+        state.filters.page = action.payload.page;
+        state.filters.pageSize = action.payload.pageSize;
       })
-      .addCase(fetchSensorDataThunk.rejected, (state, action) => {
-        state.loading = false;
-        state.error = (action.payload as string) || action.error.message || 'Lỗi tải dữ liệu';
+      .addCase(fetchSensorDataThunk.rejected, (state) => {
+        state.isLoading = false;
       });
   },
 });

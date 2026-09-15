@@ -1,10 +1,10 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import type { DeviceControlState } from '../types/dashboard.types';
+import type { DeviceKey } from '@/features/dashboard/types/dashboard.types';
 import {
   toggleDeviceThunk,
   addSensorTelemetryPoint,
-} from '../slices/dashboardSlice';
+} from '@/features/dashboard/slices/dashboardSlice';
 
 export const useDashboard = () => {
   const dispatch = useAppDispatch();
@@ -19,14 +19,14 @@ export const useDashboard = () => {
     currentHumidity,
     currentLight,
     isControllingDevice,
-    error,
   } = useAppSelector((state) => state.dashboard);
 
-  // Xử lý bật/tắt thiết bị: dispatch async thunk của Redux
-  const handleToggleDevice = (deviceKey: keyof DeviceControlState) => {
-    const targetState = !deviceState[deviceKey];
-    dispatch(toggleDeviceThunk({ deviceKey, targetState }));
-  };
+  const handleToggleDevice = useCallback(
+    (deviceKey: DeviceKey) => {
+      dispatch(toggleDeviceThunk({ deviceKey, targetState: !deviceState[deviceKey] }));
+    },
+    [deviceState, dispatch],
+  );
 
   // Mô phỏng dòng dữ liệu thời gian thực (dispatch action addSensorTelemetryPoint vào Redux)
   // Sau này khi tích hợp WebSocket, chỉ cần lắng nghe event socket và dispatch action tương tự
@@ -38,7 +38,7 @@ export const useDashboard = () => {
       // Tạo dao động nhẹ tự nhiên quanh giá trị đo hiện tại
       const temperature = +(35 + Math.sin(now.getTime() / 4000) * 3).toFixed(1);
       const humidity = +(40 + Math.cos(now.getTime() / 5000) * 15).toFixed(0);
-      const light = +(30 + Math.sin(now.getTime() / 3000) * 10).toFixed(0);
+      const light = +(700 + Math.sin(now.getTime() / 3000) * 200).toFixed(0);
 
       // Đẩy điểm mới vào Redux Store
       dispatch(
@@ -64,7 +64,6 @@ export const useDashboard = () => {
     currentHumidity,
     currentLight,
     isControllingDevice,
-    error,
   };
 };
 

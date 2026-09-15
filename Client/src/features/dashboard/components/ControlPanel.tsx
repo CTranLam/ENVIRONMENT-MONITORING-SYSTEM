@@ -6,19 +6,23 @@ import {
   BulbOutlined,
   FireOutlined,
 } from '@ant-design/icons';
-import type { DeviceControlState } from '../types/dashboard.types';
+import type {
+  DeviceControlState,
+  DeviceKey,
+} from '@/features/dashboard/types/dashboard.types';
 
 const { Title, Text } = Typography;
 
 interface ControlPanelProps {
   deviceState: DeviceControlState;
-  onToggleDevice: (device: keyof DeviceControlState) => void;
-  loading?: boolean;
+  onToggleDevice: (device: DeviceKey) => void;
+  loading: boolean;
 }
 
 export const ControlPanel: React.FC<ControlPanelProps> = ({
   deviceState,
   onToggleDevice,
+  loading,
 }) => {
   return (
     <div className="w-full flex flex-col justify-start">
@@ -63,6 +67,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
             <Switch
               checked={deviceState.coolingFan}
               onChange={() => onToggleDevice('coolingFan')}
+              disabled={loading}
               style={{
                 backgroundColor: deviceState.coolingFan ? '#ef4444' : undefined,
               }}
@@ -101,6 +106,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
             <Switch
               checked={deviceState.light}
               onChange={() => onToggleDevice('light')}
+              disabled={loading}
               style={{
                 backgroundColor: deviceState.light ? '#f59e0b' : undefined,
               }}
@@ -113,4 +119,3 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
 };
 
 export default ControlPanel;
-

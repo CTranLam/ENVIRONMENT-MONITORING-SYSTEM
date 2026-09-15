@@ -1,14 +1,14 @@
 import React from 'react';
-import { useActionHistory } from '../hooks/useActionHistory';
-import { ActionHistoryFilterBar } from './ActionHistoryFilterBar';
-import { ActionHistoryTable } from './ActionHistoryTable';
-import { ActionHistoryPagination } from './ActionHistoryPagination';
+import { ActionHistoryFilterBar } from '@/features/action-history/components/ActionHistoryFilterBar';
+import { ActionHistoryPagination } from '@/features/action-history/components/ActionHistoryPagination';
+import { ActionHistoryTable } from '@/features/action-history/components/ActionHistoryTable';
+import { useActionHistory } from '@/features/action-history/hooks/useActionHistory';
 
 export const ActionHistoryPage: React.FC = () => {
   const {
     items,
     total,
-    loading,
+    isLoading,
     filters,
     searchInput,
     totalPages,
@@ -40,7 +40,7 @@ export const ActionHistoryPage: React.FC = () => {
       {/* 2. Bảng dữ liệu lịch sử điều khiển 5 cột (Dark Navy Header, UUID v7, Badges, Column Sort) */}
       <ActionHistoryTable
         records={items}
-        loading={loading}
+        loading={isLoading}
         sortBy={filters.sortBy}
         sortOrder={filters.sortOrder}
         onColumnSort={handleColumnSort}
@@ -60,4 +60,3 @@ export const ActionHistoryPage: React.FC = () => {
 };
 
 export default ActionHistoryPage;
-

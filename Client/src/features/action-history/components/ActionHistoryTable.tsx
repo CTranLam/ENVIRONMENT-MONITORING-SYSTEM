@@ -17,25 +17,23 @@ import type {
   DeviceType,
   DeviceAction,
   ActionStatus,
-} from '../types/action-history.types';
+} from '@/features/action-history/types/action-history.types';
 
 interface ActionHistoryTableProps {
-  records?: ActionHistoryRecord[];
-  loading?: boolean;
-  sortBy?: ActionSortField;
-  sortOrder?: ActionSortOrder;
+  records: ActionHistoryRecord[];
+  loading: boolean;
+  sortBy: ActionSortField;
+  sortOrder: ActionSortOrder;
   onColumnSort: (field: ActionSortField) => void;
 }
 
 export const ActionHistoryTable: React.FC<ActionHistoryTableProps> = ({
-  records = [],
-  loading = false,
-  sortBy = 'timestamp',
-  sortOrder = 'desc',
+  records,
+  loading,
+  sortBy,
+  sortOrder,
   onColumnSort,
 }) => {
-  const safeRecords = Array.isArray(records) ? records : [];
-
   const handleCopyId = (id: string) => {
     navigator.clipboard.writeText(id);
     message.success('Đã sao chép Device UUID!');
@@ -173,14 +171,14 @@ export const ActionHistoryTable: React.FC<ActionHistoryTableProps> = ({
                   </div>
                 </td>
               </tr>
-            ) : safeRecords.length === 0 ? (
+            ) : records.length === 0 ? (
               <tr>
                 <td colSpan={5} className="py-20 text-center">
                   <Empty description="Không tìm thấy lịch sử điều khiển thiết bị phù hợp" />
                 </td>
               </tr>
             ) : (
-              safeRecords.map((record, index) => (
+              records.map((record, index) => (
                 <tr
                   key={record.id}
                   className={`hover:bg-slate-50/80 transition-colors ${
@@ -233,4 +231,3 @@ export const ActionHistoryTable: React.FC<ActionHistoryTableProps> = ({
     </div>
   );
 };
-

@@ -8,12 +8,19 @@ import {
   ReloadOutlined,
   CheckCircleOutlined,
 } from '@ant-design/icons';
-import { useAlerts } from '../hooks/useAlerts';
-import { useAppDispatch } from '@/app/hooks';
-import { toggleDeviceThunk } from '@/features/dashboard/slices/dashboardSlice';
-import type { AlertType } from '../types/alerts.types';
+import type {
+  AlertItem,
+  AlertType,
+} from '@/features/alerts/types/alerts.types';
 
 const { Title, Text, Paragraph } = Typography;
+
+interface AlertPopupModalProps {
+  alert: AlertItem | null;
+  onDismiss: () => void;
+  onAlertAction: (alert: AlertItem) => void;
+  onRetryConnection: () => void;
+}
 
 // Icon giọt nước SVG
 const DropletSvgIcon = () => (
@@ -22,11 +29,13 @@ const DropletSvgIcon = () => (
   </svg>
 );
 
-export const AlertPopupModal: React.FC = () => {
-  const dispatch = useAppDispatch();
-  const { currentPopupAlert, dismissAlert } = useAlerts();
-
-  if (!currentPopupAlert) return null;
+export const AlertPopupModal: React.FC<AlertPopupModalProps> = ({
+  alert,
+  onDismiss,
+  onAlertAction,
+  onRetryConnection,
+}) => {
+  if (!alert) return null;
 
   // Cấu hình màu sắc, icon và phong cách dựa trên loại cảnh báo
   const getAlertConfig = (type: AlertType) => {
@@ -98,33 +107,12 @@ export const AlertPopupModal: React.FC = () => {
     }
   };
 
-  const config = getAlertConfig(currentPopupAlert.type);
-
-  // Xử lý nút hành động nhanh (Bật quạt, Bật đèn, Tắt đèn...)
-  const handleQuickAction = () => {
-    if (currentPopupAlert.actionDevice !== undefined && currentPopupAlert.actionTargetState !== undefined) {
-      dispatch(
-        toggleDeviceThunk({
-          deviceKey: currentPopupAlert.actionDevice,
-          targetState: currentPopupAlert.actionTargetState,
-        })
-      );
-    }
-    dismissAlert();
-  };
-
-  const handleRetryConnection = () => {
-    if (navigator.onLine) {
-      dismissAlert();
-    } else {
-      window.location.reload();
-    }
-  };
+  const config = getAlertConfig(alert.type);
 
   return (
     <Modal
-      open={!!currentPopupAlert}
-      onCancel={dismissAlert}
+      open={!!alert}
+      onCancel={onDismiss}
       footer={null}
       centered
       destroyOnClose
@@ -143,33 +131,33 @@ export const AlertPopupModal: React.FC = () => {
 
         {/* Tiêu đề cảnh báo */}
         <Title level={4} className="!font-bold !text-slate-900 !m-0 !mb-2 !text-[20px]">
-          {currentPopupAlert.title}
+          {alert.title}
         </Title>
 
         {/* Thời gian phát hiện */}
         <span className="text-xs text-slate-400 font-medium mb-3">
-          Thời gian: {currentPopupAlert.timestamp}
+          Thời gian: {alert.timestamp}
         </span>
 
         {/* Nội dung chi tiết */}
         <Paragraph className="!text-slate-600 text-sm leading-relaxed mb-4">
-          {currentPopupAlert.message}
+          {alert.message}
         </Paragraph>
 
         {/* Thẻ thông số so sánh giá trị đo & ngưỡng (nếu có) */}
-        {currentPopupAlert.currentValue !== undefined && currentPopupAlert.thresholdValue !== undefined && (
+        {alert.currentValue !== undefined && alert.thresholdValue !== undefined && (
           <div className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 mb-5 flex items-center justify-around">
             <div className="flex flex-col items-center">
               <Text className="!text-xs !text-slate-400 !font-medium">Giá trị đo được</Text>
               <Text className="!text-base !font-extrabold !text-slate-900 mt-0.5">
-                {currentPopupAlert.currentValue} {currentPopupAlert.unit}
+                {alert.currentValue} {alert.unit}
               </Text>
             </div>
             <div className="h-7 w-[1px] bg-slate-200" />
             <div className="flex flex-col items-center">
               <Text className="!text-xs !text-slate-400 !font-medium">Ngưỡng quy định</Text>
               <Text className="!text-base !font-bold !text-slate-600 mt-0.5">
-                {currentPopupAlert.thresholdValue} {currentPopupAlert.unit}
+                {alert.thresholdValue} {alert.unit}
               </Text>
             </div>
           </div>
@@ -179,31 +167,31 @@ export const AlertPopupModal: React.FC = () => {
         <div className="w-full flex items-center justify-end gap-3 mt-2">
           <Button
             size="large"
-            onClick={dismissAlert}
+            onClick={onDismiss}
             className="flex-1 !rounded-xl !h-11 font-medium !border-slate-300 hover:!border-slate-400 !text-slate-700"
           >
             Đã hiểu / Bỏ qua
           </Button>
 
-          {currentPopupAlert.type === 'SYSTEM_OFFLINE' ? (
+          {alert.type === 'SYSTEM_OFFLINE' ? (
             <Button
               type="primary"
               size="large"
               icon={<ReloadOutlined />}
-              onClick={handleRetryConnection}
+              onClick={onRetryConnection}
               className={`flex-1 !rounded-xl !h-11 font-bold ${config.buttonColor} shadow-md`}
             >
               Thử kết nối lại
             </Button>
-          ) : currentPopupAlert.actionButtonText ? (
+          ) : alert.action ? (
             <Button
               type="primary"
               size="large"
               icon={<CheckCircleOutlined />}
-              onClick={handleQuickAction}
+              onClick={() => onAlertAction(alert)}
               className={`flex-1 !rounded-xl !h-11 font-bold ${config.buttonColor} shadow-md`}
             >
-              {currentPopupAlert.actionButtonText}
+              {alert.action.label}
             </Button>
           ) : null}
         </div>
@@ -213,4 +201,3 @@ export const AlertPopupModal: React.FC = () => {
 };
 
 export default AlertPopupModal;
-

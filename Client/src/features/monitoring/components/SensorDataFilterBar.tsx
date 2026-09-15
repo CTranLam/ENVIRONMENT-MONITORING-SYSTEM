@@ -1,14 +1,18 @@
 import React from 'react';
 import { Input, Select } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
+import type {
+  SensorFilterType,
+  SensorSortKey,
+} from '@/features/monitoring/types/sensor-data.types';
 
 interface SensorDataFilterBarProps {
   searchInput: string;
   onSearchChange: (value: string) => void;
-  selectedType: string;
-  onTypeChange: (value: string) => void;
-  selectedSortKey: string;
-  onSortSelect: (key: string) => void;
+  selectedType: SensorFilterType;
+  onTypeChange: (value: SensorFilterType) => void;
+  selectedSortKey: SensorSortKey;
+  onSortSelect: (key: SensorSortKey) => void;
 }
 
 export const SensorDataFilterBar: React.FC<SensorDataFilterBarProps> = ({
@@ -42,7 +46,7 @@ export const SensorDataFilterBar: React.FC<SensorDataFilterBarProps> = ({
           </span>
           <Select
             value={selectedType}
-            onChange={onTypeChange}
+            onChange={(value) => onTypeChange(value as SensorFilterType)}
             className="w-[155px] [&_.ant-select-selector]:!rounded-full [&_.ant-select-selector]:!border-solid [&_.ant-select-selector]:!border-slate-300 [&_.ant-select-selector]:!min-h-[40px] [&_.ant-select-selection-item]:!leading-[38px] text-[14.5px]"
             options={[
               { value: 'all', label: 'All Types' },
@@ -60,7 +64,7 @@ export const SensorDataFilterBar: React.FC<SensorDataFilterBarProps> = ({
           </span>
           <Select
             value={selectedSortKey}
-            onChange={onSortSelect}
+            onChange={(value) => onSortSelect(value as SensorSortKey)}
             className="w-[205px] [&_.ant-select-selector]:!rounded-full [&_.ant-select-selector]:!border-solid [&_.ant-select-selector]:!border-slate-300 [&_.ant-select-selector]:!min-h-[40px] [&_.ant-select-selection-item]:!leading-[38px] text-[14.5px]"
             options={[
               { value: 'timestamp_desc', label: 'Newest First' },

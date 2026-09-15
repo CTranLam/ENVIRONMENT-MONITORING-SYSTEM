@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
 import { Card, Typography, Button, Modal, Input, Tooltip } from 'antd';
 import { LinkOutlined, EditOutlined } from '@ant-design/icons';
-import type { UserProfile } from '../types/profile.types';
+import type {
+  UpdateProfileRequest,
+  UserProfile,
+} from '@/features/profile/types/profile.types';
 
 const { Title, Text } = Typography;
 
 interface ProjectItem {
   id: string;
-  key: keyof UserProfile;
+  key: ProjectLinkField;
   title: string;
   url: string;
 }
@@ -15,8 +18,10 @@ interface ProjectItem {
 interface MyProjectsCardProps {
   profile: UserProfile | null;
   loading?: boolean;
-  onUpdateProfile?: (patch: Partial<UserProfile>) => void;
+  onUpdateProfile?: (patch: UpdateProfileRequest) => void;
 }
+
+type ProjectLinkField = 'iotReportUrl' | 'apiDocsUrl' | 'githubUrl' | 'figmaUrl';
 
 export const MyProjectsCard: React.FC<MyProjectsCardProps> = ({
   profile,
@@ -68,7 +73,8 @@ export const MyProjectsCard: React.FC<MyProjectsCardProps> = ({
 
   const handleSaveModal = () => {
     if (editingItem && onUpdateProfile) {
-      onUpdateProfile({ [editingItem.key]: editUrl.trim() });
+      const patch: UpdateProfileRequest = { [editingItem.key]: editUrl.trim() };
+      onUpdateProfile(patch);
     }
     setEditingItem(null);
   };
@@ -167,4 +173,3 @@ export const MyProjectsCard: React.FC<MyProjectsCardProps> = ({
 };
 
 export default MyProjectsCard;
-

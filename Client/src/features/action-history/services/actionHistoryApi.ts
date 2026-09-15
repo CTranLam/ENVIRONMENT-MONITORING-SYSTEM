@@ -11,7 +11,7 @@ import type {
 /**
  * Tạo chuỗi UUID v7 chuẩn RFC 9562
  */
-export function generateUuidV7(timestampMs: number = Date.now()): string {
+function generateUuidV7(timestampMs: number = Date.now()): string {
   const bytes = new Uint8Array(16);
   crypto.getRandomValues(bytes);
 
@@ -46,7 +46,9 @@ function formatTimestamp(date: Date): string {
 
 const DEVICE_CONFIGS: { key: DeviceType; name: string; deviceId: string }[] = [
   { key: 'coolingFan', name: 'Cooling Fan', deviceId: '0191e4a0-7112-7801-b12a-000000000001' },
-  { key: 'light', name: 'Light', deviceId: '0191e4a0-7112-7801-b12a-000000000002' },
+  { key: 'mistingSystem', name: 'Misting System', deviceId: '0191e4a0-7112-7801-b12a-000000000002' },
+  { key: 'ventilationFan', name: 'Ventilation Fan', deviceId: '0191e4a0-7112-7801-b12a-000000000003' },
+  { key: 'light', name: 'Light', deviceId: '0191e4a0-7112-7801-b12a-000000000004' },
 ];
 
 /**
@@ -81,81 +83,124 @@ function createInitialMockHistory(): ActionHistoryRecord[] {
 
 const MOCK_ACTION_HISTORY = createInitialMockHistory();
 
+const isActionHistoryRecord = (value: unknown): value is ActionHistoryRecord => {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.id === 'string' &&
+    typeof candidate.deviceId === 'string' &&
+    typeof candidate.device === 'string' &&
+    (candidate.deviceKey === 'coolingFan' ||
+      candidate.deviceKey === 'mistingSystem' ||
+      candidate.deviceKey === 'ventilationFan' ||
+      candidate.deviceKey === 'light') &&
+    (candidate.action === 'ON' || candidate.action === 'OFF') &&
+    (candidate.status === 'SUCCESS' || candidate.status === 'FAILED') &&
+    typeof candidate.timestamp === 'string'
+  );
+};
+
+const isPaginatedActionHistoryResponse = (
+  value: unknown,
+): value is PaginatedActionHistoryResponse => {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  return (
+    Array.isArray(candidate.items) &&
+    candidate.items.every(isActionHistoryRecord) &&
+    typeof candidate.total === 'number' &&
+    Number.isFinite(candidate.total) &&
+    typeof candidate.page === 'number' &&
+    Number.isInteger(candidate.page) &&
+    candidate.page > 0 &&
+    typeof candidate.pageSize === 'number' &&
+    Number.isInteger(candidate.pageSize) &&
+    candidate.pageSize > 0 &&
+    typeof candidate.totalPages === 'number' &&
+    Number.isInteger(candidate.totalPages) &&
+    candidate.totalPages > 0
+  );
+};
+
+const getMockHistory = (
+  filters: ActionHistoryFilters,
+): PaginatedActionHistoryResponse => {
+  let filtered = [...MOCK_ACTION_HISTORY];
+
+  if (filters.search.trim()) {
+    const query = filters.search.trim().toLowerCase();
+    filtered = filtered.filter(
+      (item) =>
+        item.device.toLowerCase().includes(query) ||
+        item.deviceId.toLowerCase().includes(query),
+    );
+  }
+
+  if (filters.device !== 'all') {
+    filtered = filtered.filter((item) => item.deviceKey === filters.device);
+  }
+
+  if (filters.action !== 'all') {
+    filtered = filtered.filter((item) => item.action === filters.action);
+  }
+
+  filtered.sort((first, second) => {
+    let comparison = 0;
+    if (filters.sortBy === 'deviceId') {
+      comparison = first.deviceId.localeCompare(second.deviceId);
+    } else if (filters.sortBy === 'device') {
+      comparison = first.device.localeCompare(second.device);
+    } else if (filters.sortBy === 'action') {
+      comparison = first.action.localeCompare(second.action);
+    } else if (filters.sortBy === 'status') {
+      comparison = first.status.localeCompare(second.status);
+    } else {
+      comparison = first.timestamp.localeCompare(second.timestamp);
+    }
+
+    return filters.sortOrder === 'asc' ? comparison : -comparison;
+  });
+
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / filters.pageSize));
+  const page = Math.min(filters.page, totalPages);
+  const startIndex = (page - 1) * filters.pageSize;
+
+  return {
+    items: filtered.slice(startIndex, startIndex + filters.pageSize),
+    total,
+    page,
+    pageSize: filters.pageSize,
+    totalPages,
+  };
+};
+
 export const actionHistoryApi = {
   /**
    * Truy vấn lịch sử hành động điều khiển thiết bị:
    * Ưu tiên gọi HTTP Backend API (`/actions/history`).
    * Tự động fallback sang Mock Data Engine nếu BE chưa sẵn sàng.
    */
-  async getActionHistory(filters: ActionHistoryFilters): Promise<PaginatedActionHistoryResponse> {
+  async getHistory(filters: ActionHistoryFilters): Promise<PaginatedActionHistoryResponse> {
     try {
-      const response = await apiClient.get<PaginatedActionHistoryResponse>('/actions/history', {
+      const response = await apiClient.get<unknown>('/actions/history', {
         params: filters,
         timeout: 2500,
       });
 
-      if (response.data && Array.isArray(response.data.items)) {
+      if (isPaginatedActionHistoryResponse(response.data)) {
         return response.data;
       }
-      throw new Error('Dữ liệu API không đúng định dạng');
     } catch {
-      let filtered = [...MOCK_ACTION_HISTORY];
-
-      // 1. Tìm kiếm theo tên thiết bị hoặc deviceId
-      if (filters.search && filters.search.trim()) {
-        const query = filters.search.trim().toLowerCase();
-        filtered = filtered.filter(
-          (item) =>
-            item.device.toLowerCase().includes(query) ||
-            item.deviceId.toLowerCase().includes(query)
-        );
-      }
-
-      // 2. Lọc theo thiết bị
-      if (filters.device && filters.device !== 'all') {
-        filtered = filtered.filter((item) => item.deviceKey === filters.device);
-      }
-
-      // 3. Lọc theo hành động (ON/OFF)
-      if (filters.action && filters.action !== 'all') {
-        filtered = filtered.filter((item) => item.action === filters.action);
-      }
-
-      // 4. Sắp xếp
-      filtered.sort((a, b) => {
-        let cmp = 0;
-        if (filters.sortBy === 'deviceId') {
-          cmp = a.deviceId.localeCompare(b.deviceId);
-        } else if (filters.sortBy === 'device') {
-          cmp = a.device.localeCompare(b.device);
-        } else if (filters.sortBy === 'action') {
-          cmp = a.action.localeCompare(b.action);
-        } else if (filters.sortBy === 'status') {
-          cmp = a.status.localeCompare(b.status);
-        } else if (filters.sortBy === 'timestamp') {
-          cmp = new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
-        }
-        return filters.sortOrder === 'asc' ? cmp : -cmp;
-      });
-
-      // 5. Phân trang
-      const total = filtered.length;
-      const page = typeof filters.page === 'number' && filters.page > 0 ? filters.page : 1;
-      const pageSize = typeof filters.pageSize === 'number' && filters.pageSize > 0 ? filters.pageSize : 10;
-      const startIndex = (page - 1) * pageSize;
-      const items = filtered.slice(startIndex, startIndex + pageSize);
-      const totalPages = Math.max(1, Math.ceil(total / pageSize));
-
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      return {
-        items,
-        total,
-        page,
-        pageSize,
-        totalPages,
-      };
+      // Backend chưa sẵn sàng hoặc response sai: dùng dữ liệu mock.
     }
+
+    return getMockHistory(filters);
   },
 };
-

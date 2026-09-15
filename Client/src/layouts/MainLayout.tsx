@@ -9,7 +9,13 @@ export const MainLayout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { profile } = useProfile();
-  const { isSystemOnline } = useAlerts();
+  const {
+    isSystemOnline,
+    currentPopupAlert,
+    dismissAlert,
+    handleAlertAction,
+    retryConnection,
+  } = useAlerts({ initialize: true });
 
   const navItems = [
     { key: '/dashboard', label: 'Dashboard' },
@@ -100,7 +106,12 @@ export const MainLayout: React.FC = () => {
       </footer>
 
       {/* Modal Popup Cảnh Báo Toàn Cục (Hiển thị chính giữa màn hình) */}
-      <AlertPopupModal />
+      <AlertPopupModal
+        alert={currentPopupAlert}
+        onDismiss={dismissAlert}
+        onAlertAction={handleAlertAction}
+        onRetryConnection={retryConnection}
+      />
     </div>
   );
 };

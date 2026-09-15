@@ -4,13 +4,13 @@ import type {
   SensorDataFilters,
   PaginatedSensorDataResponse,
   SensorType,
-} from '../types/sensor-data.types';
+} from '@/features/monitoring/types/sensor-data.types';
 
 /**
  * Tạo chuỗi UUID v7 tuân thủ chuẩn RFC 9562 (Time-ordered UUID).
  * Cấu trúc: 48-bit timestamp + 4-bit ver 7 + 12-bit rand + 2-bit var (10xx) + 62-bit rand.
  */
-export function generateUuidV7(timestampMs: number = Date.now()): string {
+function generateUuidV7(timestampMs: number = Date.now()): string {
   const bytes = new Uint8Array(16);
   crypto.getRandomValues(bytes);
 
@@ -85,8 +85,96 @@ function createInitialMockData(): SensorDataRecord[] {
   return records;
 }
 
-// 100 bản ghi mock cố định
+// Giữ cố định trong phiên làm việc để dữ liệu mock không thay đổi giữa các lần lọc.
 const MOCK_RECORDS = createInitialMockData();
+
+const isSensorDataRecord = (value: unknown): value is SensorDataRecord => {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.id === 'string' &&
+    typeof candidate.name === 'string' &&
+    (candidate.type === 'temperature' ||
+      candidate.type === 'humidity' ||
+      candidate.type === 'light') &&
+    typeof candidate.value === 'number' &&
+    Number.isFinite(candidate.value) &&
+    typeof candidate.unit === 'string' &&
+    typeof candidate.timestamp === 'string'
+  );
+};
+
+const isPaginatedSensorDataResponse = (
+  value: unknown,
+): value is PaginatedSensorDataResponse => {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  return (
+    Array.isArray(candidate.items) &&
+    candidate.items.every(isSensorDataRecord) &&
+    typeof candidate.total === 'number' &&
+    Number.isFinite(candidate.total) &&
+    typeof candidate.page === 'number' &&
+    Number.isInteger(candidate.page) &&
+    candidate.page > 0 &&
+    typeof candidate.pageSize === 'number' &&
+    Number.isInteger(candidate.pageSize) &&
+    candidate.pageSize > 0 &&
+    typeof candidate.totalPages === 'number' &&
+    Number.isInteger(candidate.totalPages) &&
+    candidate.totalPages > 0
+  );
+};
+
+const getMockSensorData = (filters: SensorDataFilters): PaginatedSensorDataResponse => {
+  let filtered = [...MOCK_RECORDS];
+
+  if (filters.search.trim()) {
+    const query = filters.search.trim().toLowerCase();
+    filtered = filtered.filter(
+      (item) =>
+        item.name.toLowerCase().includes(query) || item.id.toLowerCase().includes(query),
+    );
+  }
+
+  if (filters.type !== 'all') {
+    filtered = filtered.filter((item) => item.type === filters.type);
+  }
+
+  filtered.sort((first, second) => {
+    let comparison = 0;
+    if (filters.sortBy === 'id') {
+      comparison = first.id.localeCompare(second.id);
+    } else if (filters.sortBy === 'name') {
+      comparison = first.name.localeCompare(second.name);
+    } else if (filters.sortBy === 'value') {
+      comparison = first.value - second.value;
+    } else {
+      comparison = first.timestamp.localeCompare(second.timestamp);
+    }
+
+    return filters.sortOrder === 'asc' ? comparison : -comparison;
+  });
+
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / filters.pageSize));
+  const page = Math.min(filters.page, totalPages);
+  const startIndex = (page - 1) * filters.pageSize;
+
+  return {
+    items: filtered.slice(startIndex, startIndex + filters.pageSize),
+    total,
+    page,
+    pageSize: filters.pageSize,
+    totalPages,
+  };
+};
 
 export const sensorDataApi = {
   /**
@@ -94,70 +182,20 @@ export const sensorDataApi = {
    * Ưu tiên gọi HTTP Backend API (`/sensors/history`).
    * Tự động fallback sang Mock Data Engine nếu BE chưa sẵn sàng.
    */
-  async getSensorData(filters: SensorDataFilters): Promise<PaginatedSensorDataResponse> {
+  async getHistory(filters: SensorDataFilters): Promise<PaginatedSensorDataResponse> {
     try {
-      const response = await apiClient.get<PaginatedSensorDataResponse>('/sensors/history', {
+      const response = await apiClient.get<unknown>('/sensors/history', {
         params: filters,
         timeout: 2500,
       });
 
-      // Kiểm tra tính hợp lệ của response từ Backend (tránh trường hợp Vite trả index.html hoặc dữ liệu sai định dạng)
-      if (response.data && Array.isArray(response.data.items)) {
+      if (isPaginatedSensorDataResponse(response.data)) {
         return response.data;
       }
-      throw new Error('Dữ liệu API không đúng định dạng PaginatedSensorDataResponse');
     } catch {
-      // Fallback sang Mock Data Engine cục bộ
-      let filtered = [...MOCK_RECORDS];
-
-      // 1. Lọc theo search (name hoặc id)
-      if (filters.search && filters.search.trim()) {
-        const query = filters.search.trim().toLowerCase();
-        filtered = filtered.filter(
-          (item) =>
-            item.name.toLowerCase().includes(query) ||
-            item.id.toLowerCase().includes(query)
-        );
-      }
-
-      // 2. Lọc theo sensor type
-      if (filters.type && filters.type !== 'all') {
-        filtered = filtered.filter((item) => item.type === filters.type);
-      }
-
-      // 3. Sắp xếp
-      filtered.sort((a, b) => {
-        let cmp = 0;
-        if (filters.sortBy === 'id') {
-          cmp = a.id.localeCompare(b.id);
-        } else if (filters.sortBy === 'name') {
-          cmp = a.name.localeCompare(b.name);
-        } else if (filters.sortBy === 'value') {
-          cmp = a.value - b.value;
-        } else if (filters.sortBy === 'timestamp') {
-          cmp = new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
-        }
-        return filters.sortOrder === 'asc' ? cmp : -cmp;
-      });
-
-      // 4. Phân trang
-      const total = filtered.length;
-      const page = typeof filters.page === 'number' && filters.page > 0 ? filters.page : 1;
-      const pageSize = typeof filters.pageSize === 'number' && filters.pageSize > 0 ? filters.pageSize : 10;
-      const startIndex = (page - 1) * pageSize;
-      const items = filtered.slice(startIndex, startIndex + pageSize);
-      const totalPages = Math.max(1, Math.ceil(total / pageSize));
-
-      // Giả lập network delay ngắn (100ms)
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      return {
-        items,
-        total,
-        page,
-        pageSize,
-        totalPages,
-      };
+      // Backend chưa sẵn sàng hoặc request thất bại: dùng dữ liệu mock.
     }
+
+    return getMockSensorData(filters);
   },
 };

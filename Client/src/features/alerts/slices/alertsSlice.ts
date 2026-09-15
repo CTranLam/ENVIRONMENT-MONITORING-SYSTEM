@@ -1,22 +1,34 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import type { AlertItem, AlertsState, AlertThresholds } from '../types/alerts.types';
-
-const defaultThresholds: AlertThresholds = {
-  tempMin: 15,
-  tempMax: 37,
-  humidityMin: 35,
-  humidityMax: 80,
-  lightMin: 100,
-  lightMax: 700, // Ngưỡng ánh sáng tối đa đặt 700 Lux theo yêu cầu
-};
+import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import { alertsApi } from '@/features/alerts/services/alertsApi';
+import type {
+  AlertConfiguration,
+  AlertItem,
+  AlertsState,
+  SystemStatusUpdate,
+  UpdateAlertThresholdsRequest,
+} from '@/features/alerts/types/alerts.types';
+import { DEFAULT_ALERT_THRESHOLDS } from '@/features/alerts/types/alerts.types';
 
 const initialState: AlertsState = {
-  isSystemOnline: true, // Trạng thái mặc định Online (sau này call từ BE)
+  isSystemOnline: true,
   currentPopupAlert: null,
   alertQueue: [],
   alertHistory: [],
-  thresholds: defaultThresholds,
+  thresholds: { ...DEFAULT_ALERT_THRESHOLDS },
+  isLoading: false,
+  isUpdating: false,
+  isInitialized: false,
 };
+
+export const fetchAlertConfigurationThunk = createAsyncThunk<AlertConfiguration>(
+  'alerts/fetchConfiguration',
+  () => alertsApi.getConfiguration(),
+);
+
+export const updateAlertThresholdsThunk = createAsyncThunk<
+  AlertConfiguration,
+  UpdateAlertThresholdsRequest
+>('alerts/updateThresholds', (patch) => alertsApi.updateThresholds(patch));
 
 export const alertsSlice = createSlice({
   name: 'alerts',
@@ -26,8 +38,10 @@ export const alertsSlice = createSlice({
     triggerAlert: (state, action: PayloadAction<AlertItem>) => {
       const newAlert = action.payload;
 
-      // Không thêm cảnh báo trùng loại nếu đang hiển thị
-      if (state.currentPopupAlert?.type === newAlert.type) {
+      if (
+        state.currentPopupAlert?.type === newAlert.type ||
+        state.alertQueue.some((alert) => alert.type === newAlert.type)
+      ) {
         return;
       }
 
@@ -63,20 +77,24 @@ export const alertsSlice = createSlice({
     },
 
     // Cập nhật trạng thái kết nối mạng của hệ thống
-    setSystemOnline: (state, action: PayloadAction<boolean>) => {
-      state.isSystemOnline = action.payload;
+    setSystemOnline: (state, action: PayloadAction<SystemStatusUpdate>) => {
+      const { isOnline, timestamp } = action.payload;
+      if (state.isSystemOnline === isOnline) {
+        return;
+      }
 
-      if (!action.payload) {
+      state.isSystemOnline = isOnline;
+
+      if (!isOnline) {
         // Khi mất kết nối: Tạo cảnh báo nguy cấp ngay
         const offlineAlert: AlertItem = {
-          id: `sys-offline-${Date.now()}`,
+          id: `sys-offline-${timestamp}`,
           type: 'SYSTEM_OFFLINE',
           severity: 'critical',
           title: 'Hệ thống mất kết nối (System Disconnected)',
           message:
             'Không thể thiết lập kết nối tới thiết bị IoT hoặc máy chủ. Vui lòng kiểm tra lại đường truyền mạng, bộ định tuyến WiFi hoặc nguồn cấp thiết bị!',
-          timestamp: new Date().toLocaleTimeString('vi-VN'),
-          actionButtonText: 'Kiểm tra kết nối',
+          timestamp,
         };
 
         // Ưu tiên hiển thị ngay lập tức
@@ -96,23 +114,34 @@ export const alertsSlice = createSlice({
       }
     },
 
-    // Chuyển đổi qua lại giữa Online và Offline (hỗ trợ test & demo)
-    toggleSystemOnline: (state) => {
-      alertsSlice.caseReducers.setSystemOnline(state, {
-        payload: !state.isSystemOnline,
-        type: 'alerts/setSystemOnline',
-      });
-    },
-
-    // Cập nhật cấu hình các ngưỡng đo
-    updateThresholds: (state, action: PayloadAction<Partial<AlertThresholds>>) => {
-      state.thresholds = { ...state.thresholds, ...action.payload };
-    },
-
-    // Xóa lịch sử cảnh báo
     clearAlertHistory: (state) => {
       state.alertHistory = [];
     },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchAlertConfigurationThunk.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(fetchAlertConfigurationThunk.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.isInitialized = true;
+        state.thresholds = action.payload.thresholds;
+      })
+      .addCase(fetchAlertConfigurationThunk.rejected, (state) => {
+        state.isLoading = false;
+        state.isInitialized = true;
+      })
+      .addCase(updateAlertThresholdsThunk.pending, (state) => {
+        state.isUpdating = true;
+      })
+      .addCase(updateAlertThresholdsThunk.fulfilled, (state, action) => {
+        state.isUpdating = false;
+        state.thresholds = action.payload.thresholds;
+      })
+      .addCase(updateAlertThresholdsThunk.rejected, (state) => {
+        state.isUpdating = false;
+      });
   },
 });
 
@@ -120,11 +149,8 @@ export const {
   triggerAlert,
   dismissCurrentPopup,
   setSystemOnline,
-  toggleSystemOnline,
-  updateThresholds,
   clearAlertHistory,
 } = alertsSlice.actions;
 
 export const alertsReducer = alertsSlice.reducer;
 export default alertsReducer;
-

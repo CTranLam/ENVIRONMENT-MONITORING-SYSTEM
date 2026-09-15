@@ -4,9 +4,9 @@ import {
   FireOutlined,
   BulbOutlined,
 } from '@ant-design/icons';
-import { SensorChartCard } from './SensorChartCard';
-import { ControlPanel } from './ControlPanel';
-import { useDashboard } from '../hooks/useDashboard';
+import { ControlPanel } from '@/features/dashboard/components/ControlPanel';
+import { SensorChartCard } from '@/features/dashboard/components/SensorChartCard';
+import { useDashboard } from '@/features/dashboard/hooks/useDashboard';
 import { useAlerts } from '@/features/alerts';
 
 const { Title } = Typography;
@@ -28,10 +28,11 @@ export const DashboardPage: React.FC = () => {
     currentTemp,
     currentHumidity,
     currentLight,
+    isControllingDevice,
   } = useDashboard();
 
   // Lấy ngưỡng cảnh báo an toàn từ useAlerts
-  const { thresholds } = useAlerts();
+  const { thresholds } = useAlerts({ monitorTelemetry: true });
 
   return (
     <div className="w-full mx-auto p-0 box-border my-auto">
@@ -117,6 +118,7 @@ export const DashboardPage: React.FC = () => {
           <ControlPanel
             deviceState={deviceState}
             onToggleDevice={handleToggleDevice}
+            loading={isControllingDevice}
           />
         </Col>
       </Row>

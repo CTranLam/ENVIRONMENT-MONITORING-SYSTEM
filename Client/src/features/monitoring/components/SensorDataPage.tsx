@@ -1,14 +1,14 @@
 import React from 'react';
-import { useSensorData } from '../hooks/useSensorData';
-import { SensorDataFilterBar } from './SensorDataFilterBar';
-import { SensorDataTable } from './SensorDataTable';
-import { SensorDataPagination } from './SensorDataPagination';
+import { SensorDataFilterBar } from '@/features/monitoring/components/SensorDataFilterBar';
+import { SensorDataPagination } from '@/features/monitoring/components/SensorDataPagination';
+import { SensorDataTable } from '@/features/monitoring/components/SensorDataTable';
+import { useSensorData } from '@/features/monitoring/hooks/useSensorData';
 
 export const SensorDataPage: React.FC = () => {
   const {
     items,
     total,
-    loading,
+    isLoading,
     filters,
     searchInput,
     totalPages,
@@ -37,7 +37,7 @@ export const SensorDataPage: React.FC = () => {
       {/* 2. Bảng dữ liệu cảm biến (Dark Navy Header, UUID v7, Column Sort Buttons) */}
       <SensorDataTable
         records={items}
-        loading={loading}
+        loading={isLoading}
         sortBy={filters.sortBy}
         sortOrder={filters.sortOrder}
         onColumnSort={handleColumnSort}

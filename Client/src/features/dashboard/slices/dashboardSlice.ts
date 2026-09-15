@@ -1,26 +1,13 @@
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { message } from 'antd';
-import type { DeviceControlState, SensorPoint } from '../types/dashboard.types';
-import { dashboardApi } from '../services/dashboardApi';
-
-export interface SensorTelemetryPayload {
-  time: string;
-  temperature: number;
-  humidity: number;
-  light: number;
-}
-
-export interface DashboardState {
-  deviceState: DeviceControlState;
-  tempData: SensorPoint[];
-  humidityData: SensorPoint[];
-  lightData: SensorPoint[];
-  currentTemp: number;
-  currentHumidity: number;
-  currentLight: number;
-  isControllingDevice: boolean;
-  error: string | null;
-}
+import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import { dashboardApi } from '@/features/dashboard/services/dashboardApi';
+import type {
+  DashboardState,
+  DeviceControlRequest,
+  DeviceControlResponse,
+  DeviceKey,
+  SensorPoint,
+  SensorTelemetryPayload,
+} from '@/features/dashboard/types/dashboard.types';
 
 const initialTemperaturePoints: SensorPoint[] = [
   { time: '12:00:00', value: 10 },
@@ -72,33 +59,14 @@ const initialState: DashboardState = {
   currentHumidity: 32,
   currentLight: 1000,
   isControllingDevice: false,
-  error: null,
 };
 
-// Async thunk để điều khiển thiết bị: gửi lệnh xuống BE -> MQTT -> ESP8266
-export const toggleDeviceThunk = createAsyncThunk(
+export const toggleDeviceThunk = createAsyncThunk<
+  DeviceControlResponse,
+  DeviceControlRequest
+>(
   'dashboard/toggleDevice',
-  async (
-    { deviceKey, targetState }: { deviceKey: keyof DeviceControlState; targetState: boolean },
-    { rejectWithValue }
-  ) => {
-    try {
-      await dashboardApi.controlDevice(deviceKey, targetState);
-      const deviceNames: Record<keyof DeviceControlState, string> = {
-        coolingFan: 'Quạt làm mát (Cooling Fan)',
-        mistingSystem: 'Hệ thống phun sương (Misting System)',
-        ventilationFan: 'Quạt thông gió (Ventilation Fan)',
-        light: 'Đèn chiếu sáng (Light)',
-      };
-      message.success(
-        `${deviceNames[deviceKey]} đã chuyển sang: ${targetState ? 'BẬT' : 'TẮT'}`
-      );
-      return { deviceKey, targetState };
-    } catch (err: any) {
-      message.error(`Không thể điều khiển thiết bị: ${err.message || 'Lỗi kết nối'}`);
-      return rejectWithValue(err.message || 'Lỗi điều khiển thiết bị');
-    }
-  }
+  (command) => dashboardApi.controlDevice(command),
 );
 
 export const dashboardSlice = createSlice({
@@ -108,7 +76,7 @@ export const dashboardSlice = createSlice({
     // Cập nhật trạng thái thiết bị trực tiếp (dùng khi nhận phản hồi ack qua WebSocket từ ESP8266)
     setDeviceStateDirect: (
       state,
-      action: PayloadAction<{ deviceKey: keyof DeviceControlState; newState: boolean }>
+      action: PayloadAction<{ deviceKey: DeviceKey; newState: boolean }>
     ) => {
       state.deviceState[action.payload.deviceKey] = action.payload.newState;
     },
@@ -123,12 +91,12 @@ export const dashboardSlice = createSlice({
       // Cập nhật giá trị đo tức thời
       state.currentTemp = temperature;
       state.currentHumidity = humidity;
-      state.currentLight = Math.round(light * 25);
+      state.currentLight = light;
 
       // Thêm điểm mới vào mảng và trượt mảng giữ tối đa 10 điểm
       state.tempData = [...state.tempData.slice(1), { time, value: temperature }];
       state.humidityData = [...state.humidityData.slice(1), { time, value: humidity }];
-      state.lightData = [...state.lightData.slice(1), { time, value: Math.round(light * 25) }];
+      state.lightData = [...state.lightData.slice(1), { time, value: light }];
     },
   },
   extraReducers: (builder) => {
@@ -141,12 +109,10 @@ export const dashboardSlice = createSlice({
       })
       .addCase(toggleDeviceThunk.fulfilled, (state) => {
         state.isControllingDevice = false;
-        state.error = null;
       })
       .addCase(toggleDeviceThunk.rejected, (state, action) => {
         state.isControllingDevice = false;
-        state.error = action.payload as string;
-        // Hoàn tác lại trạng thái nếu thất bại
+        // Chỉ xảy ra với lỗi nội bộ bất thường; API bình thường luôn fallback về mock data.
         const { deviceKey, targetState } = action.meta.arg;
         state.deviceState[deviceKey] = !targetState;
       });
@@ -156,4 +122,3 @@ export const dashboardSlice = createSlice({
 export const { setDeviceStateDirect, addSensorTelemetryPoint } = dashboardSlice.actions;
 export const dashboardReducer = dashboardSlice.reducer;
 export default dashboardReducer;
-

@@ -13,7 +13,7 @@ import type {
   SortField,
   SortOrder,
   SensorType,
-} from '../types/sensor-data.types';
+} from '@/features/monitoring/types/sensor-data.types';
 
 const DropletIcon = () => (
   <svg width="17" height="17" viewBox="0 0 24 24" fill="#0ea5e9" className="inline-block">
@@ -22,22 +22,20 @@ const DropletIcon = () => (
 );
 
 interface SensorDataTableProps {
-  records?: SensorDataRecord[];
-  loading?: boolean;
-  sortBy?: SortField;
-  sortOrder?: SortOrder;
+  records: SensorDataRecord[];
+  loading: boolean;
+  sortBy: SortField;
+  sortOrder: SortOrder;
   onColumnSort: (field: SortField) => void;
 }
 
 export const SensorDataTable: React.FC<SensorDataTableProps> = ({
-  records = [],
-  loading = false,
-  sortBy = 'timestamp',
-  sortOrder = 'desc',
+  records,
+  loading,
+  sortBy,
+  sortOrder,
   onColumnSort,
 }) => {
-  const safeRecords = Array.isArray(records) ? records : [];
-
   const handleCopyId = (id: string) => {
     navigator.clipboard.writeText(id);
     message.success('Đã sao chép UUID v7!');
@@ -162,14 +160,14 @@ export const SensorDataTable: React.FC<SensorDataTableProps> = ({
                   </div>
                 </td>
               </tr>
-            ) : safeRecords.length === 0 ? (
+            ) : records.length === 0 ? (
               <tr>
                 <td colSpan={4} className="py-20 text-center">
                   <Empty description="Không tìm thấy dữ liệu cảm biến phù hợp" />
                 </td>
               </tr>
             ) : (
-              safeRecords.map((record, index) => (
+              records.map((record, index) => (
                 <tr
                   key={record.id}
                   className={`hover:bg-slate-50/80 transition-colors ${
