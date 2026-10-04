@@ -1,0 +1,34 @@
+# Never copy host build output or dependencies into the build context: the
+# image installs and builds from package-lock.json itself.
+node_modules/
+dist/
+dist-ssr/
+
+.git/
+.gitignore
+
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local env files. Vite reads .env at build time, but production values are
+# injected as build args by docker-compose.yml, so the file is not needed.
+.env
+.env.*
+!.env.example
+!.env.prod.example
+
+docker-compose*.yml
+Dockerfile*
+.dockerignore
+
+*.md

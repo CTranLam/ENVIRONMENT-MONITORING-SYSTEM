@@ -1,0 +1,29 @@
+# Never ship build output, local state or secrets into the image.
+.gradle/
+build/
+out/
+bin/
+
+.git/
+.gitignore
+.gitattributes
+
+.vscode/
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Local env files: the app reads its configuration from the runtime environment.
+.env
+.env.*
+!.env.example
+!.env.prod.example
+
+# Compose files are consumed by the Docker CLI, not by the image build.
+docker-compose*.yml
+Dockerfile*
+.dockerignore
+
+*.md
+HELP.md

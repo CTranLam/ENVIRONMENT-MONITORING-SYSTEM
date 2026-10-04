@@ -1,0 +1,21 @@
+name: ems-client
+
+services:
+  client-ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080/api}
+        VITE_APP_TITLE: ${VITE_APP_TITLE:-Environment Monitoring System}
+    image: ems/client-ui:${IMAGE_TAG:-latest}
+    container_name: ems-client-ui
+    restart: unless-stopped
+    ports:
+      - "${CLIENT_PORT:-8082}:8080"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://127.0.0.1:8080"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
