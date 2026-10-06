@@ -4,9 +4,11 @@ import { dashboardReducer } from '@/features/dashboard';
 import { sensorDataReducer } from '@/features/monitoring';
 import { actionHistoryReducer } from '@/features/action-history';
 import { alertsReducer } from '@/features/alerts';
+import { authReducer } from '@/features/auth';
 
 export const store = configureStore({
   reducer: {
+    auth: authReducer,
     profile: profileReducer,
     dashboard: dashboardReducer,
     sensorData: sensorDataReducer,
@@ -21,4 +23,3 @@ export const store = configureStore({
 
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
-

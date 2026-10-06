@@ -25,6 +25,8 @@
 
 Flyway automatically applies database migrations before Hibernate validates the entity mapping. Do not run migration SQL manually.
 
+> The initial schema now uses application-generated UUID v7 keys for every primary and foreign key. If you created the previous `BIGINT` schema locally, reset the disposable local PostgreSQL volume before starting this version (`docker compose down -v`, then `docker compose up -d postgres`). Do not use that command for a database whose data must be retained.
+
 ## URLs
 
 - API: `http://localhost:8080`

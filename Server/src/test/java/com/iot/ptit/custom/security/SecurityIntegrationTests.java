@@ -18,6 +18,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -96,8 +97,38 @@ class SecurityIntegrationTests {
         mockMvc.perform(get("/api/not-created-yet").header("Authorization", "Bearer " + token))
                 .andExpect(status().isNotFound());
 
-        assertThat(userPermissionService.findAuthoritiesByEmail(EMAIL))
+        assertThat(userPermissionService.findAuthoritiesByUserId(
+                appUserRepository.findByEmailIgnoreCase(EMAIL).orElseThrow().getId()))
                 .extracting(authority -> authority.getAuthority())
                 .containsExactly(Permission.DEVICE_CONTROL);
+    }
+
+    @Test
+    void registersUuidV7AccountAndLetsItReadAndUpdateItsProfile() throws Exception {
+        MvcResult registration = mockMvc.perform(post("/api/auth/register")
+                        .contentType("application/json")
+                        .content("""
+                                {"fullName":"Profile User","studentId":"B23DCCN999","className":"D23CQCN01-B","email":"profile@example.com","password":"password-123"}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.accessToken").isNotEmpty())
+                .andExpect(jsonPath("$.profile.fullName").value("Profile User"))
+                .andReturn();
+
+        String token = registration.getResponse().getContentAsString()
+                .replaceFirst(".*\\\"accessToken\\\":\\\"([^\\\"]+)\\\".*", "$1");
+        AppUser user = appUserRepository.findByEmailIgnoreCase("profile@example.com").orElseThrow();
+        assertThat(user.getId().version()).isEqualTo(7);
+
+        mockMvc.perform(get("/api/profile/me").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(user.getId().toString()));
+
+        mockMvc.perform(put("/api/profile/me")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType("application/json")
+                        .content("{\"location\":\"Hanoi, Vietnam\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.location").value("Hanoi, Vietnam"));
     }
 }

@@ -5,5 +5,21 @@ export const apiClient = axios.create({
   timeout: 10000,
 });
 
-export default apiClient;
+apiClient.interceptors.request.use((config) => {
+  const accessToken = sessionStorage.getItem('ems.accessToken');
+  if (accessToken) config.headers.Authorization = `Bearer ${accessToken}`;
+  return config;
+});
 
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error: unknown) => {
+    if (axios.isAxiosError(error) && error.response?.status === 401) {
+      sessionStorage.removeItem('ems.accessToken');
+      if (!window.location.pathname.startsWith('/login')) window.location.assign('/login');
+    }
+    return Promise.reject(error);
+  },
+);
+
+export default apiClient;

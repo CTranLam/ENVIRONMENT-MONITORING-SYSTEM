@@ -7,6 +7,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class UserPermissionService {
@@ -21,21 +22,21 @@ public class UserPermissionService {
         this.appUserRepository = appUserRepository;
     }
 
-    public List<GrantedAuthority> findAuthoritiesByEmail(String email) {
-        return userPermissionRepository.findAllByUser_EmailIgnoreCaseAndDeletedFalse(email).stream()
+    public List<GrantedAuthority> findAuthoritiesByUserId(UUID userId) {
+        return userPermissionRepository.findAllByUser_IdAndDeletedFalse(userId).stream()
                 .map(permission -> new SimpleGrantedAuthority(permission.getPermission()))
                 .map(GrantedAuthority.class::cast)
                 .toList();
     }
 
-    public List<String> findPermissionNamesByEmail(String email) {
-        return userPermissionRepository.findAllByUser_EmailIgnoreCaseAndDeletedFalse(email).stream()
+    public List<String> findPermissionNamesByUserId(UUID userId) {
+        return userPermissionRepository.findAllByUser_IdAndDeletedFalse(userId).stream()
                 .map(permission -> permission.getPermission())
                 .toList();
     }
 
-    public boolean isActiveUser(String email) {
-        return appUserRepository.findByEmailIgnoreCase(email)
+    public boolean isActiveUser(UUID userId) {
+        return appUserRepository.findById(userId)
                 .map(user -> user.isActive() && !user.isDeleted())
                 .orElse(false);
     }

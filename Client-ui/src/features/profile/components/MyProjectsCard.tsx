@@ -8,10 +8,6 @@ import type {
 
 const { Title, Text } = Typography;
 
-const IOT_REPORT_URL = 'https://ptiteduvn-my.sharepoint.com/:w:/r/personal/lamtq_b23cn480_stu_ptit_edu_vn/_layouts/15/Doc.aspx?sourcedoc=%7B32F9E2F7-EAA1-4DF1-B6A2-FD787A47B208%7D&file=BTL-IOT.docx&action=default&mobileredirect=true&wdOrigin=APPHOME-WEB.DIRECT%2CAPPHOME-WEB.FILEBROWSER.RECENT&wdPreviousSession=81ba4a6e-94b3-4671-b6e6-18b3473c4c18&wdPreviousSessionSrc=AppHomeWeb&ct=1790149942054';
-const GITHUB_URL = 'https://github.com/CTranLam/ENVIRONMENT-MONITORING-SYSTEM';
-const FIGMA_URL = 'https://www.figma.com/design/fJX4Oy0EqBTVABP1AIUHQQ/Iot?node-id=0-1&p=f&t=Depdw7JAei5kmUqf-0';
-
 interface ProjectItem {
   id: string;
   key: ProjectLinkField;
@@ -40,25 +36,25 @@ export const MyProjectsCard: React.FC<MyProjectsCardProps> = ({
       id: 'iot-report',
       key: 'iotReportUrl',
       title: 'IoT Project Report:',
-      url: profile?.iotReportUrl || IOT_REPORT_URL,
+      url: profile?.iotReportUrl ?? '',
     },
     {
       id: 'api-docs',
       key: 'apiDocsUrl',
       title: 'API docs:',
-      url: profile?.apiDocsUrl || 'http://localhost:5000/api-docs',
+      url: profile?.apiDocsUrl ?? '',
     },
     {
       id: 'github',
       key: 'githubUrl',
       title: 'GitHub:',
-      url: profile?.githubUrl || GITHUB_URL,
+      url: profile?.githubUrl ?? '',
     },
     {
       id: 'figma',
       key: 'figmaUrl',
       title: 'Figma:',
-      url: profile?.figmaUrl || FIGMA_URL,
+      url: profile?.figmaUrl ?? '',
     },
   ];
 

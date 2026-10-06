@@ -28,11 +28,26 @@ public class AppUser extends BaseEntity {
     @Column(nullable = false, unique = true, length = 100)
     private String email;
 
-    @Column(name = "avatar_url", length = 255)
+    @Column(name = "avatar_url", columnDefinition = "TEXT")
     private String avatarUrl;
 
     @Column(name = "bio_text", columnDefinition = "TEXT")
     private String bioText;
+
+    @Column(length = 100)
+    private String location;
+
+    @Column(name = "iot_report_url", columnDefinition = "TEXT")
+    private String iotReportUrl;
+
+    @Column(name = "api_docs_url", columnDefinition = "TEXT")
+    private String apiDocsUrl;
+
+    @Column(name = "github_url", columnDefinition = "TEXT")
+    private String githubUrl;
+
+    @Column(name = "figma_url", columnDefinition = "TEXT")
+    private String figmaUrl;
 
     @Column(name = "password_hash", nullable = false, length = 100)
     private String passwordHash;

@@ -4,13 +4,15 @@ export interface UserProfile {
   fullName: string;
   email: string;
   studentId: string;       
-  avatarUrl: string;
-  location: string;
-  role: string;
-  iotReportUrl: string;
-  apiDocsUrl: string;
-  githubUrl: string;
-  figmaUrl: string;
+  className: string | null;
+  avatarUrl: string | null;
+  bioText: string | null;
+  location: string | null;
+  role: 'ADMIN' | 'OPERATOR' | 'VIEWER';
+  iotReportUrl: string | null;
+  apiDocsUrl: string | null;
+  githubUrl: string | null;
+  figmaUrl: string | null;
 }
 
 /** Fields that can be changed from the profile screen. */
@@ -20,6 +22,8 @@ export type UpdateProfileRequest = Partial<
     | 'fullName'
     | 'email'
     | 'studentId'
+    | 'className'
+    | 'bioText'
     | 'avatarUrl'
     | 'location'
     | 'iotReportUrl'

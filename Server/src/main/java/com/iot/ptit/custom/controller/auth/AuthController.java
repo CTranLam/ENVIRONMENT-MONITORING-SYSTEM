@@ -2,6 +2,7 @@ package com.iot.ptit.custom.controller.auth;
 
 import com.iot.ptit.custom.dto.auth.LoginRequest;
 import com.iot.ptit.custom.dto.auth.LoginResponse;
+import com.iot.ptit.custom.dto.auth.RegisterRequest;
 import com.iot.ptit.custom.service.auth.AuthenticationService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -22,5 +23,10 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(authenticationService.login(request));
+    }
+
+    @PostMapping("/register")
+    public ResponseEntity<LoginResponse> register(@Valid @RequestBody RegisterRequest request) {
+        return ResponseEntity.status(201).body(authenticationService.register(request));
     }
 }

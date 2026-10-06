@@ -1,14 +1,16 @@
 import React from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Avatar } from 'antd';
+import { Avatar, Button } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
 import { useProfile } from '@/features/profile';
 import { useAlerts, AlertPopupModal } from '@/features/alerts';
+import { useAuth } from '@/features/auth';
 
 export const MainLayout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { profile } = useProfile();
+  const { signOut } = useAuth();
   const {
     isSystemOnline,
     currentPopupAlert,
@@ -46,23 +48,32 @@ export const MainLayout: React.FC = () => {
           })}
         </nav>
 
-        {/* Right: User Avatar & Information */}
-        <div
-          onClick={() => navigate('/profile')}
-          className="flex items-center gap-3 cursor-pointer py-1 pr-3.5 pl-1.5 rounded-full bg-white/20 hover:bg-white/30 transition-all select-none"
-          title="Xem trang Profile"
-        >
-          <Avatar
-            size={40}
-            src={profile?.avatarUrl || undefined}
-            icon={!profile?.avatarUrl ? <UserOutlined /> : undefined}
-            className="!bg-white !text-[#0099FF] font-bold shadow-sm"
-          />
-          <div className="flex flex-col text-left">
-            <span className="text-white font-semibold text-sm leading-[18px]">
-              {profile?.fullName || 'Trần Quang Lâm'}
-            </span>
+        {/* Right: profile and sign-out controls kept together */}
+        <div className="ml-auto flex items-center gap-2">
+          <div
+            onClick={() => navigate('/profile')}
+            className="flex items-center gap-3 cursor-pointer py-1 pr-3.5 pl-1.5 rounded-full bg-white/20 hover:bg-white/30 transition-all select-none"
+            title="Xem trang Profile"
+          >
+            <Avatar
+              size={40}
+              src={profile?.avatarUrl || undefined}
+              icon={!profile?.avatarUrl ? <UserOutlined /> : undefined}
+              className="!bg-white !text-[#0099FF] font-bold shadow-sm"
+            />
+            <div className="flex flex-col text-left">
+              <span className="text-white font-semibold text-sm leading-[18px]">
+                {profile?.fullName || 'Đang tải...'}
+              </span>
+            </div>
           </div>
+          <Button
+            type="text"
+            onClick={() => { signOut(); navigate('/login'); }}
+            className="!h-auto !rounded-full !border-0 !bg-white/20 !px-4 !py-2 !text-sm !font-semibold !text-white hover:!bg-white/30"
+          >
+            Đăng xuất
+          </Button>
         </div>
       </header>
 
@@ -80,7 +91,7 @@ export const MainLayout: React.FC = () => {
 
         {/* Ở giữa: Thông tin tác giả */}
         <div className="text-white font-semibold">
-          Made by Tran Quang Lam — B23DCCN480
+          {profile ? `${profile.fullName} — ${profile.studentId}` : 'Environment Monitoring System'}
         </div>
 
         {/* Bên phải: Trạng thái kết nối ESP8266 & phiên bản (Chỉ hiển thị trạng thái thực, không click) */}

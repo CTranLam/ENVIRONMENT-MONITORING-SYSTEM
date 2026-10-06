@@ -188,12 +188,12 @@ export const ProfileInfoCard: React.FC<ProfileInfoCardProps> = ({
               level={2}
               className="!m-0 !font-bold !text-slate-900 text-center !text-[28px]"
             >
-              {profile?.fullName || 'Trần Quang Lâm'}
+              {profile?.fullName || '—'}
             </Title>
             <Tooltip title="Chỉnh sửa họ tên">
               <button
                 type="button"
-                onClick={() => handleStartEdit('fullName', profile?.fullName || 'Trần Quang Lâm')}
+                onClick={() => handleStartEdit('fullName', profile?.fullName ?? '')}
                 className="text-slate-800 hover:text-[#0099FF] hover:bg-slate-100 p-1.5 rounded-lg transition-all border-none bg-transparent cursor-pointer flex items-center justify-center"
               >
                 <EditOutlined className="text-lg !text-slate-800 hover:!text-[#0099FF]" style={{ stroke: 'currentColor', strokeWidth: 20 }} />
@@ -235,12 +235,12 @@ export const ProfileInfoCard: React.FC<ProfileInfoCardProps> = ({
         ) : (
           <div className="group flex items-center justify-center gap-2">
             <Text className="!text-slate-600 !text-[16px] !font-semibold">
-              {profile?.studentId || 'B23DCCN480'}
+              {profile?.studentId || '—'}
             </Text>
             <Tooltip title="Chỉnh sửa mã sinh viên">
               <button
                 type="button"
-                onClick={() => handleStartEdit('studentId', profile?.studentId || 'B23DCCN480')}
+                onClick={() => handleStartEdit('studentId', profile?.studentId ?? '')}
                 className="text-slate-800 hover:text-[#0099FF] hover:bg-slate-100 p-1.5 rounded-lg transition-all border-none bg-transparent cursor-pointer flex items-center justify-center"
               >
                 <EditOutlined className="text-base !text-slate-800 hover:!text-[#0099FF]" style={{ stroke: 'currentColor', strokeWidth: 20 }} />
@@ -283,7 +283,7 @@ export const ProfileInfoCard: React.FC<ProfileInfoCardProps> = ({
             </div>
           ) : (
             <Text className="!text-slate-800 text-[15px] font-medium truncate flex-1">
-              {profile?.email || 'lamtq.work@gmail.com'}
+              {profile?.email || '—'}
             </Text>
           )}
         </div>
@@ -291,7 +291,7 @@ export const ProfileInfoCard: React.FC<ProfileInfoCardProps> = ({
           <Tooltip title="Chỉnh sửa email">
             <button
               type="button"
-              onClick={() => handleStartEdit('email', profile?.email || 'lamtq.work@gmail.com')}
+              onClick={() => handleStartEdit('email', profile?.email ?? '')}
               className="text-slate-800 hover:text-[#0099FF] hover:bg-slate-200 p-1.5 rounded-lg transition-all border-none bg-transparent cursor-pointer flex items-center justify-center flex-shrink-0"
             >
               <EditOutlined className="text-base !text-slate-800 hover:!text-[#0099FF]" style={{ stroke: 'currentColor', strokeWidth: 20 }} />
@@ -333,7 +333,7 @@ export const ProfileInfoCard: React.FC<ProfileInfoCardProps> = ({
             </div>
           ) : (
             <Text className="!text-slate-800 text-[15px] font-medium truncate flex-1">
-              {profile?.location || 'Hanoi, Vietnam'}
+              {profile?.location || '—'}
             </Text>
           )}
         </div>
@@ -341,7 +341,7 @@ export const ProfileInfoCard: React.FC<ProfileInfoCardProps> = ({
           <Tooltip title="Chỉnh sửa địa chỉ">
             <button
               type="button"
-              onClick={() => handleStartEdit('location', profile?.location || 'Hanoi, Vietnam')}
+              onClick={() => handleStartEdit('location', profile?.location ?? '')}
               className="text-slate-800 hover:text-[#0099FF] hover:bg-slate-200 p-1.5 rounded-lg transition-all border-none bg-transparent cursor-pointer flex items-center justify-center flex-shrink-0"
             >
               <EditOutlined className="text-base !text-slate-800 hover:!text-[#0099FF]" style={{ stroke: 'currentColor', strokeWidth: 20 }} />

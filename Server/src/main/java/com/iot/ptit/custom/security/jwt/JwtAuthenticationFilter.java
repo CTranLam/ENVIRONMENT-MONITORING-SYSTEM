@@ -13,6 +13,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.UUID;
 
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String BEARER_PREFIX = "Bearer ";
@@ -44,15 +45,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         try {
-            String email = jwtService.extractEmail(authorization.substring(BEARER_PREFIX.length()));
-            if (!userPermissionService.isActiveUser(email)) {
+            UUID userId = jwtService.extractUserId(authorization.substring(BEARER_PREFIX.length()));
+            if (!userPermissionService.isActiveUser(userId)) {
                 throw new InsufficientAuthenticationException("The user account is unavailable.");
             }
 
             UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                    email,
+                    userId,
                     null,
-                    userPermissionService.findAuthoritiesByEmail(email)
+                    userPermissionService.findAuthoritiesByUserId(userId)
             );
             SecurityContextHolder.getContext().setAuthentication(authentication);
             filterChain.doFilter(request, response);
