@@ -10,6 +10,7 @@ const initialState: ProfileState = {
   profile: null,
   isLoading: false,
   isUpdating: false,
+  isUploadingAvatar: false,
 };
 
 export const fetchProfileThunk = createAsyncThunk<UserProfile>(
@@ -20,6 +21,11 @@ export const fetchProfileThunk = createAsyncThunk<UserProfile>(
 export const updateProfileThunk = createAsyncThunk<UserProfile, UpdateProfileRequest>(
   'profile/update',
   (patch) => profileApi.updateProfile(patch),
+);
+
+export const uploadAvatarThunk = createAsyncThunk<UserProfile, File>(
+  'profile/uploadAvatar',
+  (file) => profileApi.uploadAvatar(file),
 );
 
 export const profileSlice = createSlice({
@@ -51,6 +57,16 @@ export const profileSlice = createSlice({
       })
       .addCase(updateProfileThunk.rejected, (state) => {
         state.isUpdating = false;
+      })
+      .addCase(uploadAvatarThunk.pending, (state) => {
+        state.isUploadingAvatar = true;
+      })
+      .addCase(uploadAvatarThunk.fulfilled, (state, action: PayloadAction<UserProfile>) => {
+        state.isUploadingAvatar = false;
+        state.profile = action.payload;
+      })
+      .addCase(uploadAvatarThunk.rejected, (state) => {
+        state.isUploadingAvatar = false;
       });
   },
 });

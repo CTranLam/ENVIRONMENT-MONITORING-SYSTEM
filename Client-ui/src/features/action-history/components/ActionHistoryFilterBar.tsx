@@ -90,8 +90,8 @@ export const ActionHistoryFilterBar: React.FC<ActionHistoryFilterBarProps> = ({
             className="w-[160px] [&_.ant-select-selector]:!rounded-full [&_.ant-select-selector]:!border-solid [&_.ant-select-selector]:!border-slate-300 [&_.ant-select-selector]:!min-h-[40px] [&_.ant-select-selection-item]:!leading-[38px] text-[14.5px]"
             options={[
               { value: 'all', label: 'All Devices' },
-              { value: 'coolingFan', label: 'Cooling Fan' },
-              { value: 'light', label: 'Light' },
+              { value: 'ledGreen', label: 'LED Green (D1)' },
+              { value: 'ledRed', label: 'LED Red (D2)' },
             ]}
           />
         </div>
@@ -106,6 +106,7 @@ export const ActionHistoryFilterBar: React.FC<ActionHistoryFilterBarProps> = ({
               { value: 'all', label: 'All Status' },
               { value: 'SUCCESS', label: 'Success' },
               { value: 'FAILED', label: 'Failed' },
+              { value: 'PENDING', label: 'Pending' },
             ]}
           />
         </div>

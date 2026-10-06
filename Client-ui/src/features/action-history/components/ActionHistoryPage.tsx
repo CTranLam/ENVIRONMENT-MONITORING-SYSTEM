@@ -1,4 +1,5 @@
 import React from 'react';
+import { Alert } from 'antd';
 import { ActionHistoryFilterBar } from '@/features/action-history/components/ActionHistoryFilterBar';
 import { ActionHistoryPagination } from '@/features/action-history/components/ActionHistoryPagination';
 import { ActionHistoryTable } from '@/features/action-history/components/ActionHistoryTable';
@@ -9,6 +10,7 @@ export const ActionHistoryPage: React.FC = () => {
     items,
     total,
     isLoading,
+    error,
     filters,
     searchInput,
     totalPages,
@@ -44,6 +46,17 @@ export const ActionHistoryPage: React.FC = () => {
         selectedSortKey={currentSortKey}
         onSortSelect={handleSortSelect}
       />
+
+      {/* Cảnh báo khi không tải được dữ liệu thật từ Backend */}
+      {error && (
+        <Alert
+          type="error"
+          showIcon
+          message="Không tải được lịch sử điều khiển"
+          description={error}
+          className="!mb-4 !rounded-xl"
+        />
+      )}
 
       {/* 2. Bảng dữ liệu lịch sử điều khiển 5 cột (Dark Navy Header, UUID v7, Badges, Column Sort) */}
       <ActionHistoryTable

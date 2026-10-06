@@ -39,6 +39,9 @@ dependencies {
     implementation 'org.springframework.integration:spring-integration-mqtt'
     implementation 'org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.2.5'
 
+    // Object storage (MinIO / S3 compatible) for profile avatars
+    implementation 'io.minio:minio:8.5.17'
+
     // JWT (jjwt)
     implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'

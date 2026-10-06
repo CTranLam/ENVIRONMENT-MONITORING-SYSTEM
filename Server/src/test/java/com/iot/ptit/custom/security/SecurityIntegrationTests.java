@@ -4,6 +4,7 @@ import com.iot.ptit.custom.entity.auth.AppUser;
 import com.iot.ptit.custom.entity.auth.UserPermission;
 import com.iot.ptit.custom.repository.auth.AppUserRepository;
 import com.iot.ptit.custom.repository.auth.UserPermissionRepository;
+import com.iot.ptit.custom.repository.device.ActionHistoryRepository;
 import com.iot.ptit.custom.service.auth.UserPermissionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,8 +45,13 @@ class SecurityIntegrationTests {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private ActionHistoryRepository actionHistoryRepository;
+
     @BeforeEach
     void setUp() {
+        // action_history references users, so it must be cleared before them.
+        actionHistoryRepository.deleteAll();
         userPermissionRepository.deleteAll();
         appUserRepository.deleteAll();
         AppUser user = appUserRepository.save(new AppUser(

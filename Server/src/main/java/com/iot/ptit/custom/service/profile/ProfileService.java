@@ -5,11 +5,13 @@ import com.iot.ptit.custom.dto.profile.UserProfileResponse;
 import com.iot.ptit.custom.entity.auth.AppUser;
 import com.iot.ptit.custom.repository.auth.AppUserRepository;
 import com.iot.ptit.custom.service.profile.utils.ProfileUserUtils;
+import com.iot.ptit.custom.service.storage.MinioAvatarStorageService;
 
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Locale;
 import java.util.UUID;
@@ -23,10 +25,25 @@ import static com.iot.ptit.custom.service.profile.utils.ProfileValueUtils.confli
 public class ProfileService {
     private final AppUserRepository appUserRepository;
     private final ProfileUserUtils profileUserUtils;
+    private final MinioAvatarStorageService avatarStorageService;
 
     @Transactional(readOnly = true)
     public UserProfileResponse getProfile(UUID userId) {
-        return toResponse(profileUserUtils.findActiveUser(userId));
+        return toResponse(profileUserUtils.findActiveUser(userId), avatarStorageService);
+    }
+
+    /**
+     * Stores an uploaded avatar in MinIO and persists the resulting object key.
+     *
+     * <p>The storage service also removes the previous object, so each user keeps exactly
+     * one avatar in the bucket.</p>
+     */
+    @Transactional
+    public UserProfileResponse updateAvatar(UUID userId, MultipartFile file) {
+        AppUser user = profileUserUtils.findActiveUser(userId);
+        String objectKey = avatarStorageService.uploadAvatar(user.getId(), file, user.getAvatarUrl());
+        user.setAvatarUrl(objectKey);
+        return toResponse(appUserRepository.save(user), avatarStorageService);
     }
 
     @Transactional
@@ -55,7 +72,7 @@ public class ProfileService {
         if (request.apiDocsUrl() != null) user.setApiDocsUrl(blankToNull(request.apiDocsUrl()));
         if (request.githubUrl() != null) user.setGithubUrl(blankToNull(request.githubUrl()));
         if (request.figmaUrl() != null) user.setFigmaUrl(blankToNull(request.figmaUrl()));
-        return toResponse(appUserRepository.save(user));
+        return toResponse(appUserRepository.save(user), avatarStorageService);
     }
 
 }

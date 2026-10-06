@@ -28,6 +28,7 @@ const initialState: ActionHistoryState = {
   items: [],
   total: 0,
   isLoading: false,
+  error: null,
   filters: initialFilters,
 };
 
@@ -91,16 +92,21 @@ export const actionHistorySlice = createSlice({
     builder
       .addCase(fetchActionHistoryThunk.pending, (state) => {
         state.isLoading = true;
+        state.error = null;
       })
       .addCase(fetchActionHistoryThunk.fulfilled, (state, action: PayloadAction<PaginatedActionHistoryResponse>) => {
         state.isLoading = false;
+        state.error = null;
         state.items = action.payload.items;
         state.total = action.payload.total;
         state.filters.page = action.payload.page;
         state.filters.pageSize = action.payload.pageSize;
       })
-      .addCase(fetchActionHistoryThunk.rejected, (state) => {
+      .addCase(fetchActionHistoryThunk.rejected, (state, action) => {
         state.isLoading = false;
+        state.items = [];
+        state.total = 0;
+        state.error = action.error.message ?? 'Không tải được lịch sử điều khiển từ máy chủ.';
       });
   },
 });

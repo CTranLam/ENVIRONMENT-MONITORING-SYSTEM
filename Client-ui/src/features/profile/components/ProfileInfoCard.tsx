@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Card, Typography, Avatar, Input, Tooltip, Modal, Button, message } from 'antd';
 import {
   MailOutlined,
@@ -21,10 +21,13 @@ interface ProfileInfoCardProps {
   profile: UserProfile | null;
   loading?: boolean;
   onUpdateProfile?: (patch: UpdateProfileRequest) => void;
+  /** Upload ảnh đại diện mới lên MinIO (multipart). */
+  onUploadAvatar?: (file: File) => void;
+  uploadingAvatar?: boolean;
 }
 
-// Nén và chuyển ảnh sang kích thước tối ưu cho avatar (max 400x400)
-const resizeAvatar = (file: File): Promise<string> => {
+// Nén ảnh về kích thước tối ưu cho avatar (max 400x400) và trả về File để upload.
+const resizeAvatar = (file: File): Promise<File> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -48,11 +51,21 @@ const resizeAvatar = (file: File): Promise<string> => {
         canvas.height = height;
         const ctx = canvas.getContext('2d');
         if (!ctx) {
-          resolve(e.target?.result as string);
+          resolve(file);
           return;
         }
         ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.85));
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error('Lỗi xử lý hình ảnh'));
+              return;
+            }
+            resolve(new File([blob], 'avatar.jpg', { type: 'image/jpeg' }));
+          },
+          'image/jpeg',
+          0.85,
+        );
       };
       img.onerror = () => reject(new Error('Lỗi xử lý hình ảnh'));
       img.src = e.target?.result as string;
@@ -66,6 +79,8 @@ export const ProfileInfoCard: React.FC<ProfileInfoCardProps> = ({
   profile,
   loading = false,
   onUpdateProfile,
+  onUploadAvatar,
+  uploadingAvatar = false,
 }) => {
   const [editingField, setEditingField] = useState<'fullName' | 'studentId' | 'email' | 'location' | null>(null);
   const [editValue, setEditValue] = useState<string>('');
@@ -73,7 +88,18 @@ export const ProfileInfoCard: React.FC<ProfileInfoCardProps> = ({
   // Modal cập nhật avatar
   const [avatarModalOpen, setAvatarModalOpen] = useState(false);
   const [previewAvatar, setPreviewAvatar] = useState<string>(profile?.avatarUrl || '');
+  // File đã chọn và nén, sẵn sàng gửi lên MinIO; null nghĩa là người dùng dán URL.
+  const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null);
   const avatarFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Giải phóng blob URL của ảnh xem trước khi đóng modal hoặc chọn ảnh khác.
+  useEffect(() => {
+    return () => {
+      if (previewAvatar.startsWith('blob:')) {
+        URL.revokeObjectURL(previewAvatar);
+      }
+    };
+  }, [previewAvatar]);
 
   const handleStartEdit = (field: 'fullName' | 'studentId' | 'email' | 'location', currentVal: string) => {
     setEditingField(field);
@@ -95,6 +121,7 @@ export const ProfileInfoCard: React.FC<ProfileInfoCardProps> = ({
 
   const handleOpenAvatarModal = () => {
     setPreviewAvatar(profile?.avatarUrl || '');
+    setPendingAvatarFile(null);
     setAvatarModalOpen(true);
   };
 
@@ -108,8 +135,12 @@ export const ProfileInfoCard: React.FC<ProfileInfoCardProps> = ({
     }
 
     try {
-      const resizedBase64 = await resizeAvatar(file);
-      setPreviewAvatar(resizedBase64);
+      const prepared = await resizeAvatar(file);
+      if (previewAvatar.startsWith('blob:')) {
+        URL.revokeObjectURL(previewAvatar);
+      }
+      setPendingAvatarFile(prepared);
+      setPreviewAvatar(URL.createObjectURL(prepared));
     } catch {
       message.error('Không thể xử lý ảnh đã chọn!');
     }
@@ -117,7 +148,15 @@ export const ProfileInfoCard: React.FC<ProfileInfoCardProps> = ({
   };
 
   const handleSaveAvatar = () => {
-    if (onUpdateProfile) {
+    // Ảnh chọn từ máy: upload lên MinIO; backend trả về profile đã có URL mới.
+    if (pendingAvatarFile && onUploadAvatar) {
+      onUploadAvatar(pendingAvatarFile);
+      setPendingAvatarFile(null);
+      setAvatarModalOpen(false);
+      return;
+    }
+    // Không chọn tệp: lưu URL dán tay như trước.
+    if (onUpdateProfile && previewAvatar.trim() !== (profile?.avatarUrl ?? '')) {
       onUpdateProfile({ avatarUrl: previewAvatar.trim() });
     }
     setAvatarModalOpen(false);
@@ -356,8 +395,10 @@ export const ProfileInfoCard: React.FC<ProfileInfoCardProps> = ({
         open={avatarModalOpen}
         onOk={handleSaveAvatar}
         onCancel={() => setAvatarModalOpen(false)}
-        okText="Lưu ảnh"
+        okText={uploadingAvatar ? 'Đang tải lên...' : 'Lưu ảnh'}
         cancelText="Hủy"
+        confirmLoading={uploadingAvatar}
+        maskClosable={!uploadingAvatar}
         okButtonProps={{ className: '!bg-[#0099FF] !border-[#0099FF]' }}
         centered
         destroyOnClose
@@ -379,11 +420,18 @@ export const ProfileInfoCard: React.FC<ProfileInfoCardProps> = ({
               type="dashed"
               size="large"
               icon={<UploadOutlined />}
+              loading={uploadingAvatar}
+              disabled={uploadingAvatar}
               onClick={() => avatarFileInputRef.current?.click()}
               className="w-full !h-12 !rounded-xl !border-slate-300 hover:!border-[#0099FF] hover:!text-[#0099FF] flex items-center justify-center gap-2 font-medium cursor-pointer text-slate-700"
             >
-              Chọn ảnh từ máy tính (PNG, JPG, WEBP)
+              {pendingAvatarFile
+                ? `Đã chọn: ${pendingAvatarFile.name} (bấm để đổi)`
+                : 'Chọn ảnh từ máy tính (PNG, JPG, WEBP)'}
             </Button>
+            <span className="mt-2 text-xs text-slate-400">
+              Ảnh được nén còn tối đa 400×400 và lưu trên MinIO. Tối đa 2 MB.
+            </span>
             <input
               ref={avatarFileInputRef}
               type="file"
@@ -405,9 +453,14 @@ export const ProfileInfoCard: React.FC<ProfileInfoCardProps> = ({
               Đường dẫn URL ảnh:
             </label>
             <Input
-              value={previewAvatar}
+              value={pendingAvatarFile ? '' : previewAvatar}
+              disabled={!!pendingAvatarFile}
               onChange={(e) => setPreviewAvatar(e.target.value)}
-              placeholder="https://example.com/avatar.jpg"
+              placeholder={
+                pendingAvatarFile
+                  ? 'Đang dùng ảnh vừa chọn từ máy tính'
+                  : 'https://example.com/avatar.jpg'
+              }
               className="!rounded-lg !py-2"
               onPressEnter={handleSaveAvatar}
             />

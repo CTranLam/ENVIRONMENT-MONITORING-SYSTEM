@@ -6,6 +6,8 @@ import com.iot.ptit.custom.entity.telemetry.SensorData;
 import com.iot.ptit.custom.enums.SensorType;
 import com.iot.ptit.custom.repository.auth.AppUserRepository;
 import com.iot.ptit.custom.repository.auth.UserPermissionRepository;
+import com.iot.ptit.custom.repository.device.ActionHistoryRepository;
+import com.iot.ptit.custom.repository.device.DeviceRepository;
 import com.iot.ptit.custom.repository.telemetry.SensorDataRepository;
 import com.iot.ptit.custom.repository.telemetry.SensorRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,6 +52,12 @@ class SensorDataHistoryIntegrationTests {
     private UserPermissionRepository userPermissionRepository;
 
     @Autowired
+    private ActionHistoryRepository actionHistoryRepository;
+
+    @Autowired
+    private DeviceRepository deviceRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     private String accessToken;
@@ -58,9 +66,11 @@ class SensorDataHistoryIntegrationTests {
 
     @BeforeEach
     void setUp() throws Exception {
+        // The suite shares one in-memory database, so clear the whole graph in FK order.
+        actionHistoryRepository.deleteAll();
+        deviceRepository.deleteAll();
         sensorDataRepository.deleteAll();
         sensorRepository.deleteAll();
-        // Permissions reference users, so they must be cleared first.
         userPermissionRepository.deleteAll();
         appUserRepository.deleteAll();
 

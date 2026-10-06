@@ -8,6 +8,7 @@ import com.iot.ptit.custom.entity.auth.AppUser;
 import com.iot.ptit.custom.enums.UserRole;
 import com.iot.ptit.custom.repository.auth.AppUserRepository;
 import com.iot.ptit.custom.security.jwt.JwtService;
+import com.iot.ptit.custom.service.storage.MinioAvatarStorageService;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -26,17 +27,20 @@ public class AuthenticationService {
     private final UserPermissionService userPermissionService;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final MinioAvatarStorageService avatarStorageService;
 
     public AuthenticationService(
             AppUserRepository appUserRepository,
             UserPermissionService userPermissionService,
             PasswordEncoder passwordEncoder,
-            JwtService jwtService
+            JwtService jwtService,
+            MinioAvatarStorageService avatarStorageService
     ) {
         this.appUserRepository = appUserRepository;
         this.userPermissionService = userPermissionService;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.avatarStorageService = avatarStorageService;
     }
 
     public LoginResponse login(LoginRequest request) {
@@ -69,7 +73,7 @@ public class AuthenticationService {
 
     private LoginResponse createLoginResponse(AppUser user) {
         List<String> permissions = userPermissionService.findPermissionNamesByUserId(user.getId());
-        UserProfileResponse profile = toResponse(user);
+        UserProfileResponse profile = toResponse(user, avatarStorageService);
         return new LoginResponse(
                 jwtService.createToken(user.getId()),
                 "Bearer",

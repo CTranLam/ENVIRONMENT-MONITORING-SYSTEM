@@ -101,7 +101,35 @@ Hệ thống được thiết kế theo mô hình 4 tầng tương tác khép k�
    - Bắn tin qua STOMP WebSocket tới topic **`/topic/device-status`**.
 6. Frontend nhận tin qua WebSocket, Redux dispatch `setDeviceStatus`: công tắc dừng loading và chính thức chuyển màu sang trạng thái bật/tắt mới.
 
-### 3.3. Giám sát Sống/Chết Thiết bị (ESP8266 Online/Offline Heartbeat)
+### 3.3. Truy vấn Lịch sử (Read APIs cho 2 trang dữ liệu)
+Cả hai trang danh sách đọc trực tiếp từ PostgreSQL qua backend, **không còn mock data ở client**:
+* `GET /api/sensors/history` — phân trang/lọc/sắp xếp bảng `sensor_data`
+  (`SensorDataController` → `SensorDataQueryService`). Tham số: `search`, `type`,
+  `startTime`, `endTime`, `sortBy`, `sortOrder`, `page`, `pageSize`.
+* `GET /api/actions/history` — phân trang/lọc/sắp xếp bảng `action_history`
+  (`ActionHistoryController` → `ActionHistoryQueryService`). Tham số: `search`, `device`,
+  `action`, `status`, `startTime`, `endTime`, `sortBy`, `sortOrder`, `page`, `pageSize`.
+* Khoảng thời gian là **instant tuyệt đối** (ISO-8601 UTC). Date picker của client làm việc
+  với giờ local nên phải `dayjs(value).toISOString()` trước khi gửi; backend trả về UTC và
+  client format lại theo giờ local. Container chạy UTC còn browser chạy UTC+7 — tuyệt đối
+  không gửi chuỗi giờ local thô xuống API.
+
+### 3.4. Lưu trữ ảnh đại diện (MinIO Object Storage)
+* `POST /api/profile/me/avatar` (multipart, field `file`) → `ProfileService.updateAvatar()`
+  → `MinioAvatarStorageService` (SDK `io.minio`).
+* Ràng buộc: chỉ `image/png`, `image/jpeg`, `image/webp`; tối đa **2 MB**; client nén ảnh về
+  tối đa 400×400 trước khi upload.
+* Cột `users.avatar_url` lưu **object key** (`avatars/<userId>/<uuid>.<ext>`), không lưu URL.
+  `UserProfileResponseConverter` bung key thành URL public khi trả response và bỏ qua giá trị
+  ngoài (link `https://`, `data:`) nên vẫn tương thích kiểu "dán URL" trước đây.
+* Bucket do backend tự tạo lúc khởi động (`MinioStorageConfiguration`) và được set public-read,
+  vì thẻ `<img>` của browser không gửi được Authorization header. Chỉ ảnh đại diện được ghi
+  vào bucket này; upload mới sẽ xoá object cũ để mỗi user chỉ còn 1 ảnh.
+* Biến môi trường: `MINIO_ENDPOINT` (địa chỉ backend dùng, ví dụ `http://minio:9000`),
+  `MINIO_PUBLIC_URL` (địa chỉ browser dùng, ví dụ `http://localhost:9010/ems-avatars`),
+  `MINIO_BUCKET`, `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`.
+
+### 3.5. Giám sát Sống/Chết Thiết bị (ESP8266 Online/Offline Heartbeat)
 * `EspStatusService` đặt ngưỡng timeout là **12 giây** (`OFFLINE_AFTER = 12s`).
 * Mỗi 3 giây kiểm tra định kỳ: Nếu trong vòng 12 giây qua không có bất kỳ gói tin nào từ ESP8266 (telemetry hoặc status), Server đánh dấu `online = false` và broadcast qua WebSocket **`/topic/system-status`**.
 * Footer trên giao diện Web tự động cập nhật:
@@ -129,7 +157,7 @@ Hệ thống sử dụng **PostgreSQL 16**, quản lý lược đồ tự độn
 | `devices` | `Device` | Danh mục thiết bị chấp hành | Seed sẵn 2 thiết bị: `LED_GREEN` (D1) và `LED_RED` (D2). Cột `current_status` (`ON`, `OFF`, `UNKNOWN`). |
 | `sensors` | `Sensor` | Danh mục cảm biến | Seed sẵn 3 cảm biến: `TEMPERATURE`, `HUMIDITY`, `LIGHT`. |
 | `sensor_data` | `SensorData` | Dữ liệu đo đạc cảm biến | **Không kế thừa BaseEntity**, append-only time-series, đánh index `(sensor_id, recorded_at DESC)`. |
-| `action_history` | `ActionHistory` | Lịch sử thao tác thiết bị | Lưu `device_id`, `user_id`, `action` (`ON`/`OFF`), `trigger_by` (`MANUAL`/`AUTOMATIC`), `status` (`PENDING`/`SUCCESS`/`FAILED`). |
+| `action_history` | `ActionHistory` | Lịch sử thao tác thiết bị | Lưu `device_id`, `user_id`, `action` (`ON`/`OFF`), `trigger_by` (`MANUAL`/`AUTOMATION`/`SYSTEM`), `status` (`PENDING`/`SUCCESS`/`FAILED`), và **`action_at`** — mốc thời gian nghiệp vụ dùng để lọc/sắp xếp (khác `created_at`/`updated_at` là cột audit bị Hibernate ghi đè). Index `(action_at DESC)`, `(device_id, action_at DESC)`. |
 
 ---
 
@@ -205,9 +233,10 @@ Toàn bộ mã nghiệp vụ chia theo feature trong `src/features/<feature-name
 
 ### 8.1. Khởi chạy bằng Docker Compose (Khuyên dùng)
 ```bash
-# Khởi động toàn bộ hệ thống (PostgreSQL + Spring Boot Server + Mosquitto Broker):
+# Khởi động toàn bộ hệ thống (PostgreSQL + Spring Boot Server + MinIO + Mosquitto Broker):
 cd Server
 docker compose --profile mqtt up -d --build
+# MinIO API: http://localhost:9010 · MinIO Console: http://localhost:9011
 
 # Kiểm tra trạng thái các container:
 docker ps

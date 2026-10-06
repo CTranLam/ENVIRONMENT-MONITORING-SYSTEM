@@ -9,6 +9,7 @@ import {
   SwapOutlined,
   CheckCircleFilled,
   CloseCircleFilled,
+  ClockCircleOutlined,
   UserOutlined,
 } from '@ant-design/icons';
 import type {
@@ -102,22 +103,20 @@ export const ActionHistoryTable: React.FC<ActionHistoryTableProps> = ({
     );
   };
 
-  // Badge hiển thị Status (SUCCESS / FAILED)
+  // Badge hiển thị Status (SUCCESS / FAILED / PENDING)
   const renderStatusBadge = (status: ActionStatus) => {
-    const isSuccess = status === 'SUCCESS';
+    const styles: Record<ActionStatus, string> = {
+      SUCCESS: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+      FAILED: 'bg-red-50 text-red-600 border-red-200',
+      PENDING: 'bg-amber-50 text-amber-700 border-amber-200',
+    };
     return (
       <span
-        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[13px] font-bold border border-solid shadow-xs ${
-          isSuccess
-            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-            : 'bg-red-50 text-red-600 border-red-200'
-        }`}
+        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[13px] font-bold border border-solid shadow-xs ${styles[status]}`}
       >
-        {isSuccess ? (
-          <CheckCircleFilled className="text-emerald-500 text-xs" />
-        ) : (
-          <CloseCircleFilled className="text-red-500 text-xs" />
-        )}
+        {status === 'SUCCESS' && <CheckCircleFilled className="text-emerald-500 text-xs" />}
+        {status === 'FAILED' && <CloseCircleFilled className="text-red-500 text-xs" />}
+        {status === 'PENDING' && <ClockCircleOutlined className="text-amber-500 text-xs" />}
         <span>{status}</span>
       </span>
     );
@@ -199,20 +198,24 @@ export const ActionHistoryTable: React.FC<ActionHistoryTableProps> = ({
                   </td>
                   {/* DEVICE ID (UUID v7 Monospace with Copy Button) */}
                   <td className="py-4 px-6">
-                    <div className="flex items-center gap-2.5">
-                      <Tooltip title="Device UUID v7">
-                        <span className="font-mono text-[13.5px] font-medium text-slate-700 select-all tracking-tight">
-                          {record.deviceId}
-                        </span>
-                      </Tooltip>
-                      <button
-                        onClick={() => handleCopyId(record.deviceId)}
-                        className="opacity-40 hover:opacity-100 text-slate-500 hover:text-[#0099FF] p-1.5 rounded-md hover:bg-slate-100 transition-all border-none bg-transparent cursor-pointer"
-                        title="Sao chép Device UUID"
-                      >
-                        <CopyOutlined className="text-sm" />
-                      </button>
-                    </div>
+                    {record.deviceId ? (
+                      <div className="flex items-center gap-2.5">
+                        <Tooltip title="Device UUID v7">
+                          <span className="font-mono text-[13.5px] font-medium text-slate-700 select-all tracking-tight">
+                            {record.deviceId}
+                          </span>
+                        </Tooltip>
+                        <button
+                          onClick={() => handleCopyId(record.deviceId!)}
+                          className="opacity-40 hover:opacity-100 text-slate-500 hover:text-[#0099FF] p-1.5 rounded-md hover:bg-slate-100 transition-all border-none bg-transparent cursor-pointer"
+                          title="Sao chép Device UUID"
+                        >
+                          <CopyOutlined className="text-sm" />
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-slate-400 text-[13.5px] font-medium">—</span>
+                    )}
                   </td>
 
                   {/* DEVICE */}

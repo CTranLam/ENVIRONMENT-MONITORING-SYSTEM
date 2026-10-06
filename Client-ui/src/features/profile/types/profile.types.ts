@@ -37,4 +37,6 @@ export interface ProfileState {
   profile: UserProfile | null;
   isLoading: boolean;
   isUpdating: boolean;
+  /** True while an avatar image is being uploaded to object storage. */
+  isUploadingAvatar: boolean;
 }

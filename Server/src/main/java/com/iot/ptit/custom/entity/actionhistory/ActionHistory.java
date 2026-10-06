@@ -14,9 +14,12 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.time.Instant;
 
 @Entity
 @Table(name = "action_history")
@@ -43,6 +46,16 @@ public class ActionHistory extends BaseEntity {
     @Column(nullable = false, length = 20)
     private ActionStatus status = ActionStatus.PENDING;
 
+    /**
+     * Business timestamp: when the control action was requested.
+     *
+     * <p>Kept separate from the inherited audit {@code created_at} / {@code updated_at}
+     * columns, which Hibernate rewrites on every insert and update and therefore cannot be
+     * used to filter or order the control history.</p>
+     */
+    @Column(name = "action_at", nullable = false)
+    private Instant actionAt;
+
     protected ActionHistory() {
     }
 
@@ -51,6 +64,13 @@ public class ActionHistory extends BaseEntity {
         this.user = user;
         this.action = action;
         this.triggerBy = triggerBy;
+    }
+
+    @PrePersist
+    void applyActionTimestamp() {
+        if (actionAt == null) {
+            actionAt = Instant.now();
+        }
     }
 
 }

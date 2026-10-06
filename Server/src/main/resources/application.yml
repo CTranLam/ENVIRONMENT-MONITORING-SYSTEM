@@ -2,6 +2,12 @@ spring:
   application:
     name: environment-monitoring-system
 
+  servlet:
+    multipart:
+      # Profile avatars are small; cap them so one request cannot exhaust memory.
+      max-file-size: 5MB
+      max-request-size: 6MB
+
   datasource:
     # Local PostgreSQL defaults. Override them with DB_URL, DB_USERNAME, and DB_PASSWORD.
     url: "${DB_URL:jdbc:postgresql://localhost:5435/environment_monitoring}"
@@ -32,6 +38,17 @@ app:
       expiration-minutes: "${JWT_EXPIRATION_MINUTES:60}"
     cors:
       allowed-origins: "${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:5174,http://localhost:8081,http://localhost:8082}"
+  storage:
+    minio:
+      # Internal endpoint used by the backend to read/write objects.
+      endpoint: "${MINIO_ENDPOINT:http://localhost:9010}"
+      access-key: "${MINIO_ACCESS_KEY:ems-minio}"
+      secret-key: "${MINIO_SECRET_KEY:ems-minio-secret}"
+      bucket: "${MINIO_BUCKET:ems-avatars}"
+      # Base URL browsers use to fetch the objects. Defaults to endpoint/bucket.
+      public-url: "${MINIO_PUBLIC_URL:}"
+      # Object prefix for uploaded profile pictures.
+      avatar-prefix: "avatars"
 
 springdoc:
   swagger-ui:

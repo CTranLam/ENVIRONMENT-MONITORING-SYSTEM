@@ -10,6 +10,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -69,6 +70,16 @@ public class GlobalExceptionHandler {
     ) {
         return error(HttpStatus.BAD_REQUEST,
                 "Invalid value for parameter '" + exception.getName() + "'.", request);
+    }
+
+    /** Uploads past the configured multipart limit are a client error (413). */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiError> handleMaxUploadSize(
+            MaxUploadSizeExceededException exception,
+            HttpServletRequest request
+    ) {
+        return error(HttpStatus.PAYLOAD_TOO_LARGE,
+                "The uploaded file is too large.", request);
     }
 
     @ExceptionHandler(Exception.class)

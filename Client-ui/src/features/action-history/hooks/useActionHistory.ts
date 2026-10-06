@@ -22,7 +22,7 @@ import type {
 
 export const useActionHistory = () => {
   const dispatch = useAppDispatch();
-  const { items, total, isLoading, filters } = useAppSelector(
+  const { items, total, isLoading, error, filters } = useAppSelector(
     (state) => state.actionHistory,
   );
   const [searchInput, setSearchInput] = useState(filters.search);
@@ -128,6 +128,7 @@ export const useActionHistory = () => {
     items,
     total,
     isLoading,
+    error,
     filters,
     searchInput,
     totalPages,

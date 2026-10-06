@@ -5,7 +5,7 @@ import { MyProjectsCard } from '@/features/profile/components/MyProjectsCard';
 import { ProfileInfoCard } from '@/features/profile/components/ProfileInfoCard';
 
 export const ProfilePage: React.FC = () => {
-  const { profile, isLoading, updateProfile } = useProfile();
+  const { profile, isLoading, updateProfile, uploadAvatar, isUploadingAvatar } = useProfile();
 
   return (
     <div className="w-full max-w-[1400px] mx-auto py-4 px-2 box-border my-auto">
@@ -15,6 +15,8 @@ export const ProfilePage: React.FC = () => {
             profile={profile}
             loading={isLoading}
             onUpdateProfile={updateProfile}
+            onUploadAvatar={uploadAvatar}
+            uploadingAvatar={isUploadingAvatar}
           />
         </Col>
 

@@ -5,7 +5,7 @@ export type ActionHistoryDeviceFilter = 'all' | DeviceType;
 
 export type DeviceAction = 'ON' | 'OFF';
 
-export type ActionStatus = 'SUCCESS' | 'FAILED';
+export type ActionStatus = 'PENDING' | 'SUCCESS' | 'FAILED';
 export type ActionHistoryStatusFilter = 'all' | ActionStatus;
 
 export type ActionSortField = 'deviceId' | 'device' | 'action' | 'status' | 'timestamp';
@@ -15,7 +15,8 @@ export type ActionHistorySortKey = `${ActionSortField}_${ActionSortOrder}`;
 
 export interface ActionHistoryRecord {
   id: string;
-  deviceId: string;
+  /** UUID của thiết bị; null khi thiết bị đã bị xoá mềm. */
+  deviceId: string | null;
   device: string;
   deviceKey: DeviceType;
   action: DeviceAction;
@@ -51,5 +52,7 @@ export interface ActionHistoryState {
   items: ActionHistoryRecord[];
   total: number;
   isLoading: boolean;
+  /** Set when the backend history query fails; `null` means the last load succeeded. */
+  error: string | null;
   filters: ActionHistoryFilters;
 }
