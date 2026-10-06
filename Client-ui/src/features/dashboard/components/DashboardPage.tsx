@@ -28,7 +28,8 @@ export const DashboardPage: React.FC = () => {
     currentTemp,
     currentHumidity,
     currentLight,
-    isControllingDevice,
+    pendingDeviceKey,
+    telemetryConnection,
   } = useDashboard();
 
   // Lấy ngưỡng cảnh báo an toàn từ useAlerts
@@ -44,6 +45,10 @@ export const DashboardPage: React.FC = () => {
         >
           Environment monitoring system
         </Title>
+        <span className={`inline-flex items-center gap-1.5 text-xs font-semibold ${telemetryConnection === 'connected' ? 'text-emerald-600' : 'text-slate-500'}`}>
+          <span className={`w-2 h-2 rounded-full ${telemetryConnection === 'connected' ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+          {telemetryConnection === 'connected' ? 'Live' : telemetryConnection === 'connecting' ? 'Connecting…' : 'Offline'}
+        </span>
       </div>
 
       <Row gutter={[24, 24]} align="stretch">
@@ -118,7 +123,7 @@ export const DashboardPage: React.FC = () => {
           <ControlPanel
             deviceState={deviceState}
             onToggleDevice={handleToggleDevice}
-            loading={isControllingDevice}
+            pendingDeviceKey={pendingDeviceKey}
           />
         </Col>
       </Row>

@@ -17,6 +17,14 @@ spring:
     enabled: true
 
 app:
+  mqtt:
+    broker-url: "${MQTT_BROKER_URL:tcp://localhost:1883}"
+    client-id: "${MQTT_CLIENT_ID:ems-backend}"
+    username: "${MQTT_USERNAME:}"
+    password: "${MQTT_PASSWORD:}"
+    telemetry-topic: "${MQTT_TELEMETRY_TOPIC:home/sensor/data}"
+    device-command-topic: "${MQTT_DEVICE_COMMAND_TOPIC:home/led/control}"
+    device-status-topic: "${MQTT_DEVICE_STATUS_TOPIC:home/led/status}"
   security:
     jwt:
       # Required: a Base64-encoded secret with at least 256 bits.

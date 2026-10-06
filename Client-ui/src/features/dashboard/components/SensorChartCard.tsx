@@ -11,7 +11,7 @@ interface SensorChartCardProps {
   type: SensorMetric;
   title: string;
   unit: string;
-  currentValue: number;
+  currentValue: number | null;
   color: string;
   iconBg: string;
   icon: React.ReactNode;
@@ -61,6 +61,8 @@ export const SensorChartCard: React.FC<SensorChartCardProps> = ({
   yTicks,
   data,
 }) => {
+  const [hoveredIndex, setHoveredIndex] = React.useState<number | null>(null);
+
   // Kích thước SVG Chart chuẩn màn hình rộng
   const svgWidth = 850;
   const svgHeight = 150;
@@ -81,6 +83,21 @@ export const SensorChartCard: React.FC<SensorChartCardProps> = ({
   });
 
   const curvePath = generateSmoothPath(points);
+  const hoveredPoint = hoveredIndex === null ? undefined : points[hoveredIndex];
+  const hoveredData = hoveredIndex === null ? undefined : data[hoveredIndex];
+  const labelIndexes = new Set<number>();
+  const labelCount = Math.min(5, data.length);
+  for (let index = 0; index < labelCount; index += 1) {
+    labelIndexes.add(Math.round((index * Math.max(0, data.length - 1)) / Math.max(1, labelCount - 1)));
+  }
+
+  const handleChartMouseMove = (event: React.MouseEvent<SVGSVGElement>) => {
+    if (data.length === 0) return;
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const svgX = ((event.clientX - bounds.left) / bounds.width) * svgWidth;
+    const ratio = Math.max(0, Math.min(1, (svgX - paddingLeft) / chartWidth));
+    setHoveredIndex(Math.round(ratio * (data.length - 1)));
+  };
 
   // Tính tọa độ Y của đường ngưỡng trên (Max Threshold)
   const maxThresholdY =
@@ -116,18 +133,41 @@ export const SensorChartCard: React.FC<SensorChartCardProps> = ({
 
         {/* Giá trị lớn */}
         <div className="text-2xl font-extrabold text-slate-900 mt-1 text-center">
-          {currentValue}
-          <span className="text-base font-semibold ml-0.5 text-slate-500">
-            {unit}
-          </span>
+          {currentValue ?? '—'}
+          {currentValue !== null && (
+            <span className="text-base font-semibold ml-0.5 text-slate-500">
+              {unit}
+            </span>
+          )}
         </div>
       </div>
 
       {/* 2. Phần Biểu đồ đường bên phải (SVG Curve Chart) */}
       <div className="flex-1 overflow-hidden relative">
+        {data.length === 0 && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center text-sm font-medium text-slate-400">
+            Waiting for sensor data…
+          </div>
+        )}
+        {hoveredPoint && hoveredData && (
+          <div
+            className="absolute z-20 -translate-x-1/2 -translate-y-[115%] rounded-lg bg-slate-800 px-3 py-2 text-center text-xs text-white shadow-lg pointer-events-none whitespace-nowrap"
+            style={{
+              left: `${(hoveredPoint.x / svgWidth) * 100}%`,
+              top: `${(hoveredPoint.y / svgHeight) * 100}%`,
+            }}
+          >
+            <div className="font-semibold">{hoveredData.value} {unit}</div>
+            <div className="mt-0.5 text-slate-300">
+              {new Date(hoveredData.recordedAt).toLocaleString('vi-VN', { hour12: false })}
+            </div>
+          </div>
+        )}
         <svg
           viewBox={`0 0 ${svgWidth} ${svgHeight}`}
           className="w-full h-auto block"
+          onMouseMove={handleChartMouseMove}
+          onMouseLeave={() => setHoveredIndex(null)}
         >
           {/* Trục Y: Các mốc giá trị bên trái */}
           {yTicks.map((tick) => {
@@ -185,6 +225,29 @@ export const SensorChartCard: React.FC<SensorChartCardProps> = ({
             strokeLinejoin="round"
           />
 
+          {hoveredPoint && (
+            <>
+              <line
+                x1={hoveredPoint.x}
+                y1={paddingTop}
+                x2={hoveredPoint.x}
+                y2={svgHeight - paddingBottom}
+                stroke={color}
+                strokeWidth={1}
+                strokeDasharray="4 4"
+                strokeOpacity={0.55}
+              />
+              <circle
+                cx={hoveredPoint.x}
+                cy={hoveredPoint.y}
+                r={5}
+                fill={color}
+                stroke="#ffffff"
+                strokeWidth={2}
+              />
+            </>
+          )}
+
           {/* Điểm tròn nổi bật ở giá trị mới nhất */}
           {points.length > 0 && (
             <circle
@@ -200,8 +263,7 @@ export const SensorChartCard: React.FC<SensorChartCardProps> = ({
           {/* Trục X: Các mốc thời gian bên dưới */}
           {data.map((pt, i) => {
             const x = paddingLeft + (i / Math.max(1, data.length - 1)) * chartWidth;
-            const showLabel = i % 2 === 0 || i === data.length - 1;
-            if (!showLabel) return null;
+            if (!labelIndexes.has(i)) return null;
 
             return (
               <text

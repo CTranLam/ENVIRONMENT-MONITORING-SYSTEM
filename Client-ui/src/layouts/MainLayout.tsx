@@ -4,20 +4,25 @@ import { Avatar, Button } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
 import { useProfile } from '@/features/profile';
 import { useAlerts, AlertPopupModal } from '@/features/alerts';
+import { useDashboardTelemetry } from '@/features/dashboard';
 import { useAuth } from '@/features/auth';
+import { useAppSelector } from '@/app/hooks';
 
 export const MainLayout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { profile } = useProfile();
   const { signOut } = useAuth();
+  // Duy trì kết nối realtime (telemetry + heartbeat ESP8266) cho toàn bộ app,
+  // để popup cảnh báo mất kết nối hoạt động trên mọi trang.
+  useDashboardTelemetry();
   const {
-    isSystemOnline,
     currentPopupAlert,
     dismissAlert,
     handleAlertAction,
     retryConnection,
   } = useAlerts({ initialize: true });
+  const espOnline = useAppSelector((state) => state.dashboard.espOnline);
 
   const navItems = [
     { key: '/dashboard', label: 'Dashboard' },
@@ -96,7 +101,7 @@ export const MainLayout: React.FC = () => {
 
         {/* Bên phải: Trạng thái kết nối ESP8266 & phiên bản (Chỉ hiển thị trạng thái thực, không click) */}
         <div className="flex items-center gap-2 select-none">
-          {isSystemOnline ? (
+          {espOnline ? (
             <>
               <span className="status-dot-pulse" />
               <span>

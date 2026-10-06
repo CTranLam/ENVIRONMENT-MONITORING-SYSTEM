@@ -11,6 +11,7 @@ import { DEFAULT_ALERT_THRESHOLDS } from '@/features/alerts/types/alerts.types';
 
 const initialState: AlertsState = {
   isSystemOnline: true,
+  espOnline: true,
   currentPopupAlert: null,
   alertQueue: [],
   alertHistory: [],
@@ -114,6 +115,47 @@ export const alertsSlice = createSlice({
       }
     },
 
+    /**
+     * Cập nhật heartbeat của board ESP8266 (nguồn: WebSocket `/topic/system-status`).
+     * Khi board mất kết nối MQTT/WiFi trong lúc trình duyệt vẫn online thì phải bật
+     * popup cảnh báo `SYSTEM_OFFLINE`.
+     */
+    setEspOnline: (state, action: PayloadAction<SystemStatusUpdate>) => {
+      const { isOnline, timestamp } = action.payload;
+      if (state.espOnline === isOnline) {
+        return;
+      }
+      state.espOnline = isOnline;
+
+      if (!isOnline) {
+        const offlineAlert: AlertItem = {
+          id: `esp-offline-${timestamp}`,
+          type: 'SYSTEM_OFFLINE',
+          severity: 'critical',
+          title: 'ESP8266 mất kết nối (Device Disconnected)',
+          message:
+            'Không nhận được dữ liệu từ board ESP8266 trong hơn 12 giây. Vui lòng kiểm tra nguồn cấp, kết nối WiFi của board hoặc Mosquitto Broker!',
+          timestamp,
+        };
+
+        state.alertHistory = [offlineAlert, ...state.alertHistory.slice(0, 49)];
+        state.alertQueue = state.alertQueue.filter((a) => a.type !== 'SYSTEM_OFFLINE');
+        if (state.currentPopupAlert?.type !== 'SYSTEM_OFFLINE') {
+          if (state.currentPopupAlert) {
+            state.alertQueue.unshift(state.currentPopupAlert);
+          }
+          state.currentPopupAlert = offlineAlert;
+        }
+        return;
+      }
+
+      // Board đã online trở lại: tự động đóng popup mất kết nối
+      if (state.currentPopupAlert?.type === 'SYSTEM_OFFLINE') {
+        state.currentPopupAlert = state.alertQueue.shift() || null;
+      }
+      state.alertQueue = state.alertQueue.filter((a) => a.type !== 'SYSTEM_OFFLINE');
+    },
+
     clearAlertHistory: (state) => {
       state.alertHistory = [];
     },
@@ -149,6 +191,7 @@ export const {
   triggerAlert,
   dismissCurrentPopup,
   setSystemOnline,
+  setEspOnline,
   clearAlertHistory,
 } = alertsSlice.actions;
 

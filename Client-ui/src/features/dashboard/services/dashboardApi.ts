@@ -1,7 +1,10 @@
 import apiClient from '@/services/apiClient';
 import type {
+  DashboardTelemetryResponse,
   DeviceControlRequest,
   DeviceControlResponse,
+  DeviceStatusResponse,
+  EspStatusResponse,
 } from '@/features/dashboard/types/dashboard.types';
 
 const isDeviceControlResponse = (value: unknown): value is DeviceControlResponse => {
@@ -11,33 +14,36 @@ const isDeviceControlResponse = (value: unknown): value is DeviceControlResponse
 
   const candidate = value as Record<string, unknown>;
   return (
-    (candidate.deviceKey === 'coolingFan' ||
-      candidate.deviceKey === 'mistingSystem' ||
-      candidate.deviceKey === 'ventilationFan' ||
-      candidate.deviceKey === 'light') &&
-    typeof candidate.targetState === 'boolean'
+    (candidate.deviceKey === 'ledGreen' || candidate.deviceKey === 'ledRed') &&
+    (typeof candidate.on === 'boolean' || typeof candidate.targetState === 'boolean')
   );
 };
 
 export const dashboardApi = {
+  async getTelemetryHistory(limit = 60): Promise<DashboardTelemetryResponse> {
+    const response = await apiClient.get<DashboardTelemetryResponse>('/telemetry/dashboard', {
+      params: { limit },
+    });
+    return response.data;
+  },
+
+  async getDeviceStatuses(): Promise<DeviceStatusResponse[]> {
+    const response = await apiClient.get<DeviceStatusResponse[]>('/devices/status');
+    return response.data;
+  },
+
+  async getEspStatus(): Promise<EspStatusResponse> {
+    const response = await apiClient.get<EspStatusResponse>('/devices/esp-status');
+    return response.data;
+  },
+
   /**
    * Gửi lệnh điều khiển thiết bị xuống Backend.
    * Backend sau đó sẽ publish vào MQTT Broker để gửi tới ESP8266
    */
   async controlDevice(command: DeviceControlRequest): Promise<DeviceControlResponse> {
-    try {
-      const response = await apiClient.post<unknown>('/devices/control', {
-        device: command.deviceKey,
-        state: command.targetState ? 'ON' : 'OFF',
-      });
-
-      if (isDeviceControlResponse(response.data)) {
-        return response.data;
-      }
-    } catch {
-      // Backend chưa sẵn sàng hoặc request thất bại: dùng mock acknowledgement.
-    }
-
-    return command;
+    const response = await apiClient.post<unknown>('/devices/control', command);
+    if (!isDeviceControlResponse(response.data)) throw new Error('Invalid device control response.');
+    return response.data;
   },
 };

@@ -45,8 +45,8 @@ function formatTimestamp(date: Date): string {
 }
 
 const DEVICE_CONFIGS: { key: DeviceType; name: string; deviceId: string }[] = [
-  { key: 'coolingFan', name: 'Cooling Fan', deviceId: '0191e4a0-7112-7801-b12a-000000000001' },
-  { key: 'light', name: 'Light', deviceId: '0191e4a0-7112-7801-b12a-000000000002' },
+  { key: 'ledGreen', name: 'LED Green', deviceId: '00000000-0000-7000-8000-000000000011' },
+  { key: 'ledRed', name: 'LED Red', deviceId: '00000000-0000-7000-8000-000000000012' },
 ];
 
 /**

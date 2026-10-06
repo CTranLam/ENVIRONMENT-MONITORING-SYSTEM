@@ -66,7 +66,7 @@ export const ActionHistoryTable: React.FC<ActionHistoryTableProps> = ({
 
   // Badge hiển thị thiết bị kèm icon
   const renderDeviceBadge = (key: DeviceType, name: string) => {
-    if (key === 'coolingFan') {
+    if (key === 'ledGreen') {
       return (
         <div className="flex items-center gap-3">
           <span className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center text-red-500 flex-shrink-0 shadow-xs">

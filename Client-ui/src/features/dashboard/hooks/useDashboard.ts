@@ -1,13 +1,15 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import type { DeviceKey } from '@/features/dashboard/types/dashboard.types';
 import {
+  clearPendingDevice,
   toggleDeviceThunk,
-  addSensorTelemetryPoint,
 } from '@/features/dashboard/slices/dashboardSlice';
+import { useDashboardTelemetry } from '@/features/dashboard/hooks/useDashboardTelemetry';
 
 export const useDashboard = () => {
   const dispatch = useAppDispatch();
+  useDashboardTelemetry();
 
   // Đọc toàn bộ state tập trung từ Redux Store qua useAppSelector
   const {
@@ -19,40 +21,21 @@ export const useDashboard = () => {
     currentHumidity,
     currentLight,
     isControllingDevice,
+    pendingDeviceKey,
+    espOnline,
+    telemetryConnection,
+    isLoadingTelemetry,
   } = useAppSelector((state) => state.dashboard);
 
   const handleToggleDevice = useCallback(
     (deviceKey: DeviceKey) => {
       dispatch(toggleDeviceThunk({ deviceKey, targetState: !deviceState[deviceKey] }));
+      setTimeout(() => {
+        dispatch(clearPendingDevice({ deviceKey }));
+      }, 6000);
     },
     [deviceState, dispatch],
   );
-
-  // Mô phỏng dòng dữ liệu thời gian thực (dispatch action addSensorTelemetryPoint vào Redux)
-  // Sau này khi tích hợp WebSocket, chỉ cần lắng nghe event socket và dispatch action tương tự
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const now = new Date();
-      const timeStr = now.toTimeString().split(' ')[0];
-
-      // Tạo dao động nhẹ tự nhiên quanh giá trị đo hiện tại
-      const temperature = +(35 + Math.sin(now.getTime() / 4000) * 3).toFixed(1);
-      const humidity = +(40 + Math.cos(now.getTime() / 5000) * 15).toFixed(0);
-      const light = +(700 + Math.sin(now.getTime() / 3000) * 200).toFixed(0);
-
-      // Đẩy điểm mới vào Redux Store
-      dispatch(
-        addSensorTelemetryPoint({
-          time: timeStr,
-          temperature,
-          humidity,
-          light,
-        })
-      );
-    }, 3000);
-
-    return () => clearInterval(interval);
-  }, [dispatch]);
 
   return {
     deviceState,
@@ -64,6 +47,10 @@ export const useDashboard = () => {
     currentHumidity,
     currentLight,
     isControllingDevice,
+    pendingDeviceKey,
+    espOnline,
+    telemetryConnection,
+    isLoadingTelemetry,
   };
 };
 

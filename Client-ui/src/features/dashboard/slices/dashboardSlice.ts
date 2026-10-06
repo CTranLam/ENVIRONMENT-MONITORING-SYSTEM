@@ -1,64 +1,51 @@
 import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import { dashboardApi } from '@/features/dashboard/services/dashboardApi';
 import type {
+  DashboardTelemetryResponse,
   DashboardState,
   DeviceControlRequest,
   DeviceControlResponse,
   DeviceKey,
   SensorPoint,
   SensorTelemetryPayload,
+  DeviceStatusResponse,
+  EspStatusResponse,
 } from '@/features/dashboard/types/dashboard.types';
 
-const initialTemperaturePoints: SensorPoint[] = [
-  { time: '12:00:00', value: 10 },
-  { time: '12:00:02', value: 9 },
-  { time: '12:00:04', value: 12 },
-  { time: '12:00:06', value: 35 },
-  { time: '12:00:08', value: 34 },
-  { time: '12:00:10', value: 36 },
-  { time: '12:00:12', value: 35 },
-  { time: '12:00:14', value: 37 },
-  { time: '12:00:16', value: 36 },
-];
+const MAX_POINTS = 60;
 
-const initialHumidityPoints: SensorPoint[] = [
-  { time: '12:00:00', value: 20 },
-  { time: '12:00:02', value: 21 },
-  { time: '12:00:04', value: 16 },
-  { time: '12:00:06', value: 68 },
-  { time: '12:00:08', value: 62 },
-  { time: '12:00:10', value: 50 },
-  { time: '12:00:12', value: 75 },
-  { time: '12:00:14', value: 82 },
-  { time: '12:00:16', value: 85 },
-];
+const toPoint = (recordedAt: string, value: number): SensorPoint => ({
+  recordedAt,
+  time: new Date(recordedAt).toLocaleTimeString('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }),
+  value,
+});
 
-const initialLightPoints: SensorPoint[] = [
-  { time: '12:00:00', value: 125 },
-  { time: '12:00:02', value: 150 },
-  { time: '12:00:04', value: 200 },
-  { time: '12:00:06', value: 700 },
-  { time: '12:00:08', value: 625 },
-  { time: '12:00:10', value: 800 },
-  { time: '12:00:12', value: 850 },
-  { time: '12:00:14', value: 950 },
-  { time: '12:00:16', value: 1000 },
-];
+const appendPoint = (points: SensorPoint[], recordedAt: string, value: number) => {
+  if (points.at(-1)?.recordedAt === recordedAt) return points;
+  return [...points, toPoint(recordedAt, value)].slice(-MAX_POINTS);
+};
 
 const initialState: DashboardState = {
   deviceState: {
-    coolingFan: true,
-    mistingSystem: true,
-    ventilationFan: true,
-    light: true,
+    ledGreen: false,
+    ledRed: false,
   },
-  tempData: initialTemperaturePoints,
-  humidityData: initialHumidityPoints,
-  lightData: initialLightPoints,
-  currentTemp: 36,
-  currentHumidity: 32,
-  currentLight: 1000,
+  tempData: [],
+  humidityData: [],
+  lightData: [],
+  currentTemp: null,
+  currentHumidity: null,
+  currentLight: null,
   isControllingDevice: false,
+  pendingDeviceKey: null,
+  espOnline: false,
+  isLoadingTelemetry: false,
+  telemetryConnection: 'disconnected',
 };
 
 export const toggleDeviceThunk = createAsyncThunk<
@@ -67,6 +54,21 @@ export const toggleDeviceThunk = createAsyncThunk<
 >(
   'dashboard/toggleDevice',
   (command) => dashboardApi.controlDevice(command),
+);
+
+export const fetchDashboardTelemetryThunk = createAsyncThunk<
+  DashboardTelemetryResponse,
+  number
+>('dashboard/fetchTelemetry', (limit) => dashboardApi.getTelemetryHistory(limit));
+
+export const fetchDeviceStatusesThunk = createAsyncThunk<DeviceStatusResponse[]>(
+  'dashboard/fetchDeviceStatuses',
+  () => dashboardApi.getDeviceStatuses(),
+);
+
+export const fetchEspStatusThunk = createAsyncThunk<EspStatusResponse>(
+  'dashboard/fetchEspStatus',
+  () => dashboardApi.getEspStatus(),
 );
 
 export const dashboardSlice = createSlice({
@@ -81,44 +83,90 @@ export const dashboardSlice = createSlice({
       state.deviceState[action.payload.deviceKey] = action.payload.newState;
     },
 
+    setTelemetryConnection: (state, action: PayloadAction<DashboardState['telemetryConnection']>) => {
+      state.telemetryConnection = action.payload;
+    },
+
+    setDeviceStatus: (state, action: PayloadAction<DeviceStatusResponse>) => {
+      const { deviceKey, on } = action.payload;
+      state.deviceState[deviceKey] = on;
+      if (state.pendingDeviceKey === deviceKey) state.pendingDeviceKey = null;
+      state.isControllingDevice = state.pendingDeviceKey !== null;
+    },
+
+    setEspStatus: (state, action: PayloadAction<EspStatusResponse>) => {
+      state.espOnline = action.payload.online;
+    },
+
+    clearPendingDevice: (state, action: PayloadAction<{ deviceKey: DeviceKey }>) => {
+      if (state.pendingDeviceKey === action.payload.deviceKey) {
+        state.pendingDeviceKey = null;
+        state.isControllingDevice = false;
+      }
+    },
+
     // Thêm điểm cảm biến mới (hứng dữ liệu thời gian thực từ WebSocket hoặc stream)
     addSensorTelemetryPoint: (
       state,
       action: PayloadAction<SensorTelemetryPayload>
     ) => {
-      const { time, temperature, humidity, light } = action.payload;
+      const { recordedAt, temperature, humidity, light } = action.payload;
 
       // Cập nhật giá trị đo tức thời
       state.currentTemp = temperature;
       state.currentHumidity = humidity;
       state.currentLight = light;
 
-      // Thêm điểm mới vào mảng và trượt mảng giữ tối đa 10 điểm
-      state.tempData = [...state.tempData.slice(1), { time, value: temperature }];
-      state.humidityData = [...state.humidityData.slice(1), { time, value: humidity }];
-      state.lightData = [...state.lightData.slice(1), { time, value: light }];
+      state.tempData = appendPoint(state.tempData, recordedAt, temperature);
+      state.humidityData = appendPoint(state.humidityData, recordedAt, humidity);
+      state.lightData = appendPoint(state.lightData, recordedAt, light);
     },
   },
   extraReducers: (builder) => {
     builder
+      .addCase(fetchDashboardTelemetryThunk.pending, (state) => {
+        state.isLoadingTelemetry = true;
+      })
+      .addCase(fetchDashboardTelemetryThunk.fulfilled, (state, action) => {
+        const { temperature, humidity, light } = action.payload;
+        state.isLoadingTelemetry = false;
+        state.tempData = temperature.map((point) => toPoint(point.recordedAt, point.value));
+        state.humidityData = humidity.map((point) => toPoint(point.recordedAt, point.value));
+        state.lightData = light.map((point) => toPoint(point.recordedAt, point.value));
+        state.currentTemp = state.tempData.at(-1)?.value ?? null;
+        state.currentHumidity = state.humidityData.at(-1)?.value ?? null;
+        state.currentLight = state.lightData.at(-1)?.value ?? null;
+      })
+      .addCase(fetchDashboardTelemetryThunk.rejected, (state) => {
+        state.isLoadingTelemetry = false;
+      })
+      .addCase(fetchDeviceStatusesThunk.fulfilled, (state, action) => {
+        action.payload.forEach((status) => { state.deviceState[status.deviceKey] = status.on; });
+      })
+      .addCase(fetchEspStatusThunk.fulfilled, (state, action) => {
+        state.espOnline = action.payload.online;
+      })
       .addCase(toggleDeviceThunk.pending, (state, action) => {
         state.isControllingDevice = true;
-        // Cập nhật lạc quan (optimistic update) trên giao diện ngay lập tức
-        const { deviceKey, targetState } = action.meta.arg;
-        state.deviceState[deviceKey] = targetState;
+        state.pendingDeviceKey = action.meta.arg.deviceKey;
       })
-      .addCase(toggleDeviceThunk.fulfilled, (state) => {
-        state.isControllingDevice = false;
+      .addCase(toggleDeviceThunk.fulfilled, () => {
+        // The switch changes only after an MQTT status acknowledgement from ESP8266.
       })
       .addCase(toggleDeviceThunk.rejected, (state, action) => {
         state.isControllingDevice = false;
-        // Chỉ xảy ra với lỗi nội bộ bất thường; API bình thường luôn fallback về mock data.
-        const { deviceKey, targetState } = action.meta.arg;
-        state.deviceState[deviceKey] = !targetState;
+        if (state.pendingDeviceKey === action.meta.arg.deviceKey) state.pendingDeviceKey = null;
       });
   },
 });
 
-export const { setDeviceStateDirect, addSensorTelemetryPoint } = dashboardSlice.actions;
+export const {
+  setDeviceStateDirect,
+  setTelemetryConnection,
+  setDeviceStatus,
+  setEspStatus,
+  clearPendingDevice,
+  addSensorTelemetryPoint,
+} = dashboardSlice.actions;
 export const dashboardReducer = dashboardSlice.reducer;
 export default dashboardReducer;

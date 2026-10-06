@@ -4,6 +4,7 @@ import { toggleDeviceThunk } from '@/features/dashboard';
 import {
   dismissCurrentPopup,
   fetchAlertConfigurationThunk,
+  setEspOnline,
   setSystemOnline,
   triggerAlert,
   updateAlertThresholdsThunk,
@@ -30,6 +31,7 @@ export const useAlerts = ({
   const dispatch = useAppDispatch();
   const {
     isSystemOnline,
+    espOnline,
     currentPopupAlert,
     alertHistory,
     thresholds,
@@ -70,8 +72,27 @@ export const useAlerts = ({
     };
   }, [dispatch, initialize]);
 
+  /**
+   * Đồng bộ heartbeat của ESP8266 (nhận qua WebSocket STOMP `/topic/system-status`)
+   * vào tầng cảnh báo. Nhờ vậy khi board mất kết nối WiFi/MQTT trong lúc trình duyệt
+   * vẫn online, popup `SYSTEM_OFFLINE` vẫn được bật lên.
+   */
   useEffect(() => {
-    if (!monitorTelemetry || !isSystemOnline) {
+    if (!initialize) {
+      return;
+    }
+
+    dispatch(setEspOnline({ isOnline: espOnline, timestamp: getCurrentTime() }));
+  }, [dispatch, espOnline, initialize]);
+
+  useEffect(() => {
+    if (
+      !monitorTelemetry ||
+      !isSystemOnline ||
+      currentTemp === null ||
+      currentHumidity === null ||
+      currentLight === null
+    ) {
       return;
     }
 
@@ -108,9 +129,9 @@ export const useAlerts = ({
       unit: '°C',
       timestamp,
       action: {
-        deviceKey: 'coolingFan',
+        deviceKey: 'ledGreen',
         targetState: true,
-        label: 'Bật quạt làm mát ngay',
+        label: 'Bật LED xanh',
       },
     }));
     evaluateMetric('TEMPERATURE_LOW', currentTemp < thresholds.tempMin, () => ({
@@ -135,9 +156,9 @@ export const useAlerts = ({
       unit: '%',
       timestamp,
       action: {
-        deviceKey: 'ventilationFan',
+        deviceKey: 'ledRed',
         targetState: true,
-        label: 'Bật thông gió',
+        label: 'Bật LED đỏ',
       },
     }));
     evaluateMetric('HUMIDITY_LOW', currentHumidity < thresholds.humidityMin, () => ({
@@ -151,9 +172,9 @@ export const useAlerts = ({
       unit: '%',
       timestamp,
       action: {
-        deviceKey: 'mistingSystem',
+        deviceKey: 'ledGreen',
         targetState: true,
-        label: 'Bật phun sương',
+        label: 'Bật LED xanh',
       },
     }));
     evaluateMetric('LIGHT_HIGH', currentLight > thresholds.lightMax, () => ({
@@ -167,9 +188,9 @@ export const useAlerts = ({
       unit: 'Lux',
       timestamp,
       action: {
-        deviceKey: 'light',
+        deviceKey: 'ledGreen',
         targetState: false,
-        label: 'Tắt đèn chiếu sáng ngay',
+        label: 'Tắt LED xanh',
       },
     }));
     evaluateMetric('LIGHT_LOW', currentLight < thresholds.lightMin, () => ({
@@ -183,9 +204,9 @@ export const useAlerts = ({
       unit: 'Lux',
       timestamp,
       action: {
-        deviceKey: 'light',
+        deviceKey: 'ledGreen',
         targetState: true,
-        label: 'Bật đèn chiếu sáng ngay',
+        label: 'Bật LED xanh',
       },
     }));
   }, [

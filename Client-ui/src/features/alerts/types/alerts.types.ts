@@ -53,12 +53,16 @@ export const DEFAULT_ALERT_THRESHOLDS: AlertThresholds = {
   tempMax: 37,
   humidityMin: 35,
   humidityMax: 80,
-  lightMin: 100,
-  lightMax: 700,
+  // LDR ADC after inversion: 0 = darkest, 1023 = brightest.
+  lightMin: 200,
+  lightMax: 900,
 };
 
 export interface AlertsState {
+  /** Browser/network reachability, driven by `navigator.onLine`. */
   isSystemOnline: boolean;
+  /** Heartbeat of the ESP8266 board, driven by the backend WebSocket. */
+  espOnline: boolean;
   currentPopupAlert: AlertItem | null;
   alertQueue: AlertItem[];
   alertHistory: AlertItem[];
@@ -68,4 +72,3 @@ export interface AlertsState {
   isInitialized: boolean;
 }
 import type { DeviceKey } from '@/features/dashboard';
-

@@ -16,13 +16,13 @@ const { Title, Text } = Typography;
 interface ControlPanelProps {
   deviceState: DeviceControlState;
   onToggleDevice: (device: DeviceKey) => void;
-  loading: boolean;
+  pendingDeviceKey: DeviceKey | null;
 }
 
 export const ControlPanel: React.FC<ControlPanelProps> = ({
   deviceState,
   onToggleDevice,
-  loading,
+  pendingDeviceKey,
 }) => {
   return (
     <div className="w-full flex flex-col justify-start">
@@ -36,22 +36,22 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
 
       {/* 2 Groups compact container sát lên trên */}
       <div className="w-full flex flex-col gap-3.5">
-        {/* Group 1: TEMPERATURE (Cooling Fan - LED 1) - Diện tích gọn gàng */}
+        {/* Green LED */}
         <div className="w-full bg-[#fff5f5] border-[1.5px] border-solid border-[#fecdd3] rounded-[20px] p-4 shadow-[0_2px_8px_rgba(244,63,94,0.04)] flex flex-col gap-3">
           {/* Category Header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
               <FireOutlined className="text-[#ef4444] text-[15px]" />
               <Text className="!text-[#ef4444] !font-bold !text-[12px] tracking-wider uppercase">
-                Temperature
+                Green LED
               </Text>
             </div>
             <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-600">
-              LED 1
+              D1
             </span>
           </div>
 
-          {/* Row: Cooling Fan */}
+          {/* Row: LED Green */}
           <div className="bg-white rounded-[14px] px-4 py-3 flex items-center justify-between border border-solid border-[#ffe4e6] shadow-2xs">
             <div className="flex items-center gap-3">
               <span className="w-9 h-9 rounded-full bg-red-50 flex items-center justify-center text-red-500 shadow-2xs flex-shrink-0">
@@ -59,38 +59,39 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
               </span>
               <div className="flex flex-col">
                 <Text className="!font-bold !text-slate-800 text-[15px] leading-tight">
-                  Cooling Fan
+                  LED Green
                 </Text>
-                <span className="text-[11px] text-slate-400 font-medium mt-0.5">Relay 1 (LED 1)</span>
+                <span className="text-[11px] text-slate-400 font-medium mt-0.5">GPIO D1 · ESP8266</span>
               </div>
             </div>
             <Switch
-              checked={deviceState.coolingFan}
-              onChange={() => onToggleDevice('coolingFan')}
-              disabled={loading}
+              checked={deviceState.ledGreen}
+              onChange={() => onToggleDevice('ledGreen')}
+              loading={pendingDeviceKey === 'ledGreen'}
+              disabled={pendingDeviceKey !== null}
               style={{
-                backgroundColor: deviceState.coolingFan ? '#ef4444' : undefined,
+                backgroundColor: deviceState.ledGreen ? '#22c55e' : undefined,
               }}
             />
           </div>
         </div>
 
-        {/* Group 2: LIGHT INTENSITY (Light - LED 2) - Diện tích gọn gàng */}
+        {/* Red LED */}
         <div className="w-full bg-[#fffbeb] border-[1.5px] border-solid border-[#fde68a] rounded-[20px] p-4 shadow-[0_2px_8px_rgba(217,119,6,0.04)] flex flex-col gap-3">
           {/* Category Header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
               <BulbOutlined className="text-[#d97706] text-[15px]" />
               <Text className="!text-[#d97706] !font-bold !text-[12px] tracking-wider uppercase">
-                Lighting
+                Red LED
               </Text>
             </div>
             <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
-              LED 2
+              D2
             </span>
           </div>
 
-          {/* Row: Light */}
+          {/* Row: LED Red */}
           <div className="bg-white rounded-[14px] px-4 py-3 flex items-center justify-between border border-solid border-[#fef3c7] shadow-2xs">
             <div className="flex items-center gap-3">
               <span className="w-9 h-9 rounded-full bg-amber-50 flex items-center justify-center text-amber-500 shadow-2xs flex-shrink-0">
@@ -98,17 +99,18 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
               </span>
               <div className="flex flex-col">
                 <Text className="!font-bold !text-slate-800 text-[15px] leading-tight">
-                  Light
+                  LED Red
                 </Text>
-                <span className="text-[11px] text-slate-400 font-medium mt-0.5">Relay 2 (LED 2)</span>
+                <span className="text-[11px] text-slate-400 font-medium mt-0.5">GPIO D2 · ESP8266</span>
               </div>
             </div>
             <Switch
-              checked={deviceState.light}
-              onChange={() => onToggleDevice('light')}
-              disabled={loading}
+              checked={deviceState.ledRed}
+              onChange={() => onToggleDevice('ledRed')}
+              loading={pendingDeviceKey === 'ledRed'}
+              disabled={pendingDeviceKey !== null}
               style={{
-                backgroundColor: deviceState.light ? '#f59e0b' : undefined,
+                backgroundColor: deviceState.ledRed ? '#ef4444' : undefined,
               }}
             />
           </div>
