@@ -1,115 +1,86 @@
+import dayjs from 'dayjs';
 import apiClient from '@/services/apiClient';
 import type {
-  SensorDataRecord,
-  SensorDataFilters,
   PaginatedSensorDataResponse,
+  SensorDataFilters,
+  SensorDataRecord,
   SensorType,
 } from '@/features/monitoring/types/sensor-data.types';
 
-/**
- * Tạo chuỗi UUID v7 tuân thủ chuẩn RFC 9562 (Time-ordered UUID).
- * Cấu trúc: 48-bit timestamp + 4-bit ver 7 + 12-bit rand + 2-bit var (10xx) + 62-bit rand.
- */
-function generateUuidV7(timestampMs: number = Date.now()): string {
-  const bytes = new Uint8Array(16);
-  crypto.getRandomValues(bytes);
-
-  const ts = BigInt(timestampMs);
-  bytes[0] = Number((ts >> 40n) & 0xffn);
-  bytes[1] = Number((ts >> 32n) & 0xffn);
-  bytes[2] = Number((ts >> 24n) & 0xffn);
-  bytes[3] = Number((ts >> 16n) & 0xffn);
-  bytes[4] = Number((ts >> 8n) & 0xffn);
-  bytes[5] = Number(ts & 0xffn);
-
-  // Version 7 in byte 6 high nibble
-  bytes[6] = 0x70 | (bytes[6] & 0x0f);
-  // RFC variant 10xx in byte 8 high 2 bits
-  bytes[8] = 0x80 | (bytes[8] & 0x3f);
-
-  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
+/** Raw row shape returned by `GET /api/sensors/history`. */
+interface SensorDataRecordResponse {
+  id: string;
+  sensorName: string;
+  sensorType: string;
+  value: number;
+  unit: string;
+  recordedAt: string;
 }
 
-/**
- * Format timestamp sang 'YYYY-MM-DD HH:mm:ss'
- */
-function formatTimestamp(date: Date): string {
-  const pad = (n: number) => n.toString().padStart(2, '0');
-  const year = date.getFullYear();
-  const month = pad(date.getMonth() + 1);
-  const day = pad(date.getDate());
-  const hours = pad(date.getHours());
-  const minutes = pad(date.getMinutes());
-  const seconds = pad(date.getSeconds());
-  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+interface PaginatedSensorDataResponseDto {
+  items: SensorDataRecordResponse[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
 }
 
+const SENSOR_TYPE_KEYS: Record<string, SensorType> = {
+  TEMPERATURE: 'temperature',
+  HUMIDITY: 'humidity',
+  LIGHT: 'light',
+};
+
+const toSensorType = (sensorType: string): SensorType | null =>
+  SENSOR_TYPE_KEYS[sensorType.toUpperCase()] ?? null;
+
+/** Backend sends ISO-8601 UTC; the table and date pickers use `YYYY-MM-DD HH:mm:ss` local time. */
+const toDisplayTimestamp = (recordedAt: string): string =>
+  dayjs(recordedAt).format('YYYY-MM-DD HH:mm:ss');
+
 /**
- * Khởi tạo 100 bản ghi dữ liệu cảm biến mẫu với UUID v7 chuẩn
+ * The date pickers work with local wall-clock strings, but the API compares absolute
+ * instants, so the range is converted to UTC ISO-8601 before it leaves the browser.
+ * Without this a machine in UTC+7 would ask for a window 7 hours off the server clock.
  */
-function createInitialMockData(): SensorDataRecord[] {
-  const records: SensorDataRecord[] = [];
-  const now = Date.now();
-  const types: { type: SensorType; name: string; unit: string }[] = [
-    { type: 'temperature', name: 'DHT22 - Temperature', unit: '°C' },
-    { type: 'humidity', name: 'DHT22 - Humidity', unit: '%' },
-    { type: 'light', name: 'LDR - Light Intensity', unit: 'Lux' },
-  ];
+const toInstantParam = (localTimestamp: string | null): string | null =>
+  localTimestamp ? dayjs(localTimestamp).toISOString() : null;
 
-  for (let i = 0; i < 100; i++) {
-    // Mỗi bản ghi cách nhau 3 phút ngược về quá khứ
-    const timeOffset = i * 3 * 60 * 1000 + Math.floor(Math.random() * 30000);
-    const recordTime = now - timeOffset;
-    const config = types[i % types.length];
-
-    let value = 0;
-    if (config.type === 'temperature') {
-      value = Number((25.0 + Math.sin(i * 0.3) * 6 + Math.random() * 4).toFixed(1));
-    } else if (config.type === 'humidity') {
-      value = Math.round(65 + Math.cos(i * 0.25) * 15 + Math.random() * 6);
-    } else {
-      value = Math.round(350 + Math.sin(i * 0.4) * 180 + Math.random() * 60);
-    }
-
-    records.push({
-      id: generateUuidV7(recordTime),
-      name: config.name,
-      type: config.type,
-      value,
-      unit: config.unit,
-      timestamp: formatTimestamp(new Date(recordTime)),
-    });
+const toRecord = (item: SensorDataRecordResponse): SensorDataRecord | null => {
+  const type = toSensorType(item.sensorType);
+  if (!type || typeof item.value !== 'number' || !Number.isFinite(item.value)) {
+    return null;
   }
 
-  return records;
-}
+  return {
+    id: item.id,
+    name: item.sensorName,
+    type,
+    value: item.value,
+    unit: item.unit,
+    timestamp: toDisplayTimestamp(item.recordedAt),
+  };
+};
 
-// Giữ cố định trong phiên làm việc để dữ liệu mock không thay đổi giữa các lần lọc.
-const MOCK_RECORDS = createInitialMockData();
-
-const isSensorDataRecord = (value: unknown): value is SensorDataRecord => {
+const isSensorDataRecordResponse = (value: unknown): value is SensorDataRecordResponse => {
   if (!value || typeof value !== 'object') {
     return false;
   }
-
   const candidate = value as Record<string, unknown>;
   return (
     typeof candidate.id === 'string' &&
-    typeof candidate.name === 'string' &&
-    (candidate.type === 'temperature' ||
-      candidate.type === 'humidity' ||
-      candidate.type === 'light') &&
+    typeof candidate.sensorName === 'string' &&
+    typeof candidate.sensorType === 'string' &&
     typeof candidate.value === 'number' &&
     Number.isFinite(candidate.value) &&
     typeof candidate.unit === 'string' &&
-    typeof candidate.timestamp === 'string'
+    typeof candidate.recordedAt === 'string'
   );
 };
 
 const isPaginatedSensorDataResponse = (
   value: unknown,
-): value is PaginatedSensorDataResponse => {
+): value is PaginatedSensorDataResponseDto => {
   if (!value || typeof value !== 'object') {
     return false;
   }
@@ -117,7 +88,7 @@ const isPaginatedSensorDataResponse = (
   const candidate = value as Record<string, unknown>;
   return (
     Array.isArray(candidate.items) &&
-    candidate.items.every(isSensorDataRecord) &&
+    candidate.items.every(isSensorDataRecordResponse) &&
     typeof candidate.total === 'number' &&
     Number.isFinite(candidate.total) &&
     typeof candidate.page === 'number' &&
@@ -132,78 +103,39 @@ const isPaginatedSensorDataResponse = (
   );
 };
 
-const getMockSensorData = (filters: SensorDataFilters): PaginatedSensorDataResponse => {
-  let filtered = [...MOCK_RECORDS];
-
-  if (filters.search.trim()) {
-    const query = filters.search.trim().toLowerCase();
-    filtered = filtered.filter(
-      (item) =>
-        item.name.toLowerCase().includes(query) || item.id.toLowerCase().includes(query),
-    );
-  }
-
-  if (filters.type !== 'all') {
-    filtered = filtered.filter((item) => item.type === filters.type);
-  }
-
-  if (filters.startTime) {
-    filtered = filtered.filter((item) => item.timestamp >= filters.startTime!);
-  }
-
-  if (filters.endTime) {
-    filtered = filtered.filter((item) => item.timestamp <= filters.endTime!);
-  }
-
-  filtered.sort((first, second) => {
-    let comparison = 0;
-    if (filters.sortBy === 'id') {
-      comparison = first.id.localeCompare(second.id);
-    } else if (filters.sortBy === 'name') {
-      comparison = first.name.localeCompare(second.name);
-    } else if (filters.sortBy === 'value') {
-      comparison = first.value - second.value;
-    } else {
-      comparison = first.timestamp.localeCompare(second.timestamp);
-    }
-
-    return filters.sortOrder === 'asc' ? comparison : -comparison;
-  });
-
-  const total = filtered.length;
-  const totalPages = Math.max(1, Math.ceil(total / filters.pageSize));
-  const page = Math.min(filters.page, totalPages);
-  const startIndex = (page - 1) * filters.pageSize;
-
-  return {
-    items: filtered.slice(startIndex, startIndex + filters.pageSize),
-    total,
-    page,
-    pageSize: filters.pageSize,
-    totalPages,
-  };
-};
-
 export const sensorDataApi = {
   /**
-   * Truy vấn danh sách lịch sử cảm biến:
-   * Ưu tiên gọi HTTP Backend API (`/sensors/history`).
-   * Tự động fallback sang Mock Data Engine nếu BE chưa sẵn sàng.
+   * Truy vấn lịch sử cảm biến từ Backend (`GET /api/sensors/history`).
+   *
+   * <p>Toàn bộ filter (search, type, khoảng thời gian), sort và phân trang được đẩy
+   * xuống server; không còn dữ liệu mock ở client.</p>
    */
   async getHistory(filters: SensorDataFilters): Promise<PaginatedSensorDataResponse> {
-    try {
-      const response = await apiClient.get<unknown>('/sensors/history', {
-        params: filters,
-        timeout: 2500,
-      });
+    const response = await apiClient.get<unknown>('/sensors/history', {
+      params: {
+        search: filters.search,
+        type: filters.type,
+        startTime: toInstantParam(filters.startTime),
+        endTime: toInstantParam(filters.endTime),
+        sortBy: filters.sortBy,
+        sortOrder: filters.sortOrder,
+        page: filters.page,
+        pageSize: filters.pageSize,
+      },
+    });
 
-      if (isPaginatedSensorDataResponse(response.data)) {
-        return response.data;
-      }
-    } catch {
-      // Backend chưa sẵn sàng hoặc request thất bại: dùng dữ liệu mock.
+    if (!isPaginatedSensorDataResponse(response.data)) {
+      throw new Error('Dữ liệu cảm biến trả về không đúng định dạng.');
     }
 
-    return getMockSensorData(filters);
+    return {
+      items: response.data.items
+        .map(toRecord)
+        .filter((record): record is SensorDataRecord => record !== null),
+      total: response.data.total,
+      page: response.data.page,
+      pageSize: response.data.pageSize,
+      totalPages: response.data.totalPages,
+    };
   },
 };

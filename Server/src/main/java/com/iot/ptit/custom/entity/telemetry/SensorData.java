@@ -28,7 +28,9 @@ public class SensorData {
     @JoinColumn(name = "sensor_id", nullable = false)
     private Sensor sensor;
 
-    @Column(nullable = false)
+    // `value` is a reserved word in H2 (used by the test profile) and in some PostgreSQL
+    // contexts, so the identifier is always quoted; the column name stays lowercase.
+    @Column(name = "`value`", nullable = false)
     private Double value;
 
     @Column(name = "recorded_at", nullable = false, updatable = false)

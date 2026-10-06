@@ -1,4 +1,5 @@
 import React from 'react';
+import { Alert } from 'antd';
 import { SensorDataFilterBar } from '@/features/monitoring/components/SensorDataFilterBar';
 import { SensorDataPagination } from '@/features/monitoring/components/SensorDataPagination';
 import { SensorDataTable } from '@/features/monitoring/components/SensorDataTable';
@@ -9,6 +10,7 @@ export const SensorDataPage: React.FC = () => {
     items,
     total,
     isLoading,
+    error,
     filters,
     searchInput,
     totalPages,
@@ -38,6 +40,17 @@ export const SensorDataPage: React.FC = () => {
         selectedSortKey={currentSortKey}
         onSortSelect={handleSortSelect}
       />
+
+      {/* Cảnh báo khi không tải được dữ liệu thật từ Backend */}
+      {error && (
+        <Alert
+          type="error"
+          showIcon
+          message="Không tải được dữ liệu cảm biến"
+          description={error}
+          className="!mb-4 !rounded-xl"
+        />
+      )}
 
       {/* 2. Bảng dữ liệu cảm biến (Dark Navy Header, UUID v7, Column Sort Buttons) */}
       <SensorDataTable

@@ -18,7 +18,7 @@ import type {
 
 export const useSensorData = () => {
   const dispatch = useAppDispatch();
-  const { items, total, isLoading, filters } = useAppSelector(
+  const { items, total, isLoading, error, filters } = useAppSelector(
     (state) => state.sensorData
   );
 
@@ -126,6 +126,7 @@ export const useSensorData = () => {
     items,
     total,
     isLoading,
+    error,
     filters,
     searchInput,
     totalPages,

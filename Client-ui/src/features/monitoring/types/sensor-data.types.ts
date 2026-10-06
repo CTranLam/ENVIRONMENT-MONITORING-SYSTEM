@@ -38,5 +38,7 @@ export interface SensorDataState {
   items: SensorDataRecord[];
   total: number;
   isLoading: boolean;
+  /** Set when the backend history query fails; `null` means the last load succeeded. */
+  error: string | null;
   filters: SensorDataFilters;
 }
