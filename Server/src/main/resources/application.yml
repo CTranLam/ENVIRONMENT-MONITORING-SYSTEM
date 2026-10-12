@@ -31,6 +31,14 @@ app:
     telemetry-topic: "${MQTT_TELEMETRY_TOPIC:home/sensor/data}"
     device-command-topic: "${MQTT_DEVICE_COMMAND_TOPIC:home/led/control}"
     device-status-topic: "${MQTT_DEVICE_STATUS_TOPIC:home/led/status}"
+  telemetry:
+    retention:
+      # Keep raw measurements for a short, queryable window. Aggregates can be added later
+      # if the project needs long-term reporting.
+      days: "${TELEMETRY_RETENTION_DAYS:7}"
+      cleanup-batch-size: "${TELEMETRY_CLEANUP_BATCH_SIZE:10000}"
+      cleanup-cron: "${TELEMETRY_CLEANUP_CRON:0 15 2 * * *}"
+      cleanup-zone: "${TELEMETRY_CLEANUP_ZONE:UTC}"
   security:
     jwt:
       # Required: a Base64-encoded secret with at least 256 bits.

@@ -18,6 +18,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.DateTimeException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -37,6 +43,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SensorDataQueryService {
     private static final int MAX_PAGE_SIZE = 100;
+    private static final DateTimeFormatter DISPLAY_TIMESTAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     /** Sort keys accepted from the web client, mapped to entity paths. */
     private static final Map<String, String> SORT_PATHS = Map.of(
@@ -51,6 +58,7 @@ public class SensorDataQueryService {
     @Transactional(readOnly = true)
     public PaginatedSensorDataResponse getHistory(
             String search,
+            String timeZone,
             String type,
             Instant startTime,
             Instant endTime,
@@ -62,7 +70,8 @@ public class SensorDataQueryService {
         int safePage = Math.max(page, 1);
         int safePageSize = Math.clamp(pageSize, 1, MAX_PAGE_SIZE);
 
-        Specification<SensorData> specification = buildSpecification(search, parseSensorType(type), startTime, endTime);
+        Specification<SensorData> specification = buildSpecification(
+                search, parseTimeRange(search, timeZone), parseSearchValue(search), parseSensorType(type), startTime, endTime);
         Pageable pageable = PageRequest.of(safePage - 1, safePageSize, buildSort(sortBy, sortOrder));
 
         Page<SensorData> result = sensorDataRepository.findAllFiltered(specification, pageable);
@@ -91,6 +100,8 @@ public class SensorDataQueryService {
 
     private Specification<SensorData> buildSpecification(
             String search,
+            TimeRange searchedTimeRange,
+            Double searchedValue,
             SensorType sensorType,
             Instant startTime,
             Instant endTime
@@ -110,11 +121,20 @@ public class SensorDataQueryService {
                 // UUID input matches the primary key exactly rather than being cast to text,
                 // which keeps the query portable between PostgreSQL and the H2 test profile.
                 UUID searchId = parseUuid(trimmed);
+                List<Predicate> searchPredicates = new ArrayList<>();
+                searchPredicates.add(byName);
                 if (searchId != null) {
-                    predicates.add(criteriaBuilder.or(byName, criteriaBuilder.equal(root.get("id"), searchId)));
-                } else {
-                    predicates.add(byName);
+                    searchPredicates.add(criteriaBuilder.equal(root.get("id"), searchId));
                 }
+                if (searchedTimeRange != null) {
+                    searchPredicates.add(criteriaBuilder.and(
+                            criteriaBuilder.greaterThanOrEqualTo(root.get("recordedAt"), searchedTimeRange.start()),
+                            criteriaBuilder.lessThan(root.get("recordedAt"), searchedTimeRange.endExclusive())));
+                }
+                if (searchedValue != null) {
+                    searchPredicates.add(criteriaBuilder.equal(root.get("value"), searchedValue));
+                }
+                predicates.add(criteriaBuilder.or(searchPredicates.toArray(new Predicate[0])));
             }
             if (sensorType != null) {
                 predicates.add(criteriaBuilder.equal(root.get("sensor").get("sensorType"), sensorType));
@@ -164,6 +184,59 @@ public class SensorDataQueryService {
             return null;
         }
     }
+
+    /** Returns an exact numeric value only for finite user input such as {@code 29.3}. */
+    private Double parseSearchValue(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            double parsed = Double.parseDouble(value.trim());
+            return Double.isFinite(parsed) ? parsed : null;
+        } catch (NumberFormatException exception) {
+            return null;
+        }
+    }
+
+    /**
+     * Parses the timestamp copied from the client table in the browser's IANA timezone.
+     * A date means a whole local day; a date-time means the displayed second.
+     */
+    private TimeRange parseTimeRange(String search, String timeZone) {
+        if (search == null || search.isBlank()) {
+            return null;
+        }
+        ZoneId zoneId = parseZoneId(timeZone);
+        String value = search.trim();
+        try {
+            LocalDate date = LocalDate.parse(value);
+            return new TimeRange(date.atStartOfDay(zoneId).toInstant(), date.plusDays(1).atStartOfDay(zoneId).toInstant());
+        } catch (DateTimeParseException ignored) {
+            // Try the timestamp format rendered in the table next.
+        }
+        try {
+            Instant instant = Instant.parse(value);
+            return new TimeRange(instant, instant.plusSeconds(1));
+        } catch (DateTimeParseException ignored) {
+            // The user normally copies a local timestamp, not an ISO instant.
+        }
+        try {
+            Instant instant = LocalDateTime.parse(value, DISPLAY_TIMESTAMP).atZone(zoneId).toInstant();
+            return new TimeRange(instant, instant.plusSeconds(1));
+        } catch (DateTimeParseException ignored) {
+            return null;
+        }
+    }
+
+    private ZoneId parseZoneId(String timeZone) {
+        try {
+            return timeZone == null || timeZone.isBlank() ? ZoneId.of("UTC") : ZoneId.of(timeZone);
+        } catch (DateTimeException exception) {
+            return ZoneId.of("UTC");
+        }
+    }
+
+    private record TimeRange(Instant start, Instant endExclusive) { }
 
     private SensorDataRecordResponse toResponse(SensorData data, Sensor sensor) {
         return new SensorDataRecordResponse(

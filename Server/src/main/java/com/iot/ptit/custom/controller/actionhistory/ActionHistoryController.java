@@ -35,6 +35,7 @@ public class ActionHistoryController {
     @Operation(summary = "Query device control history with paging, filtering and sorting")
     public PaginatedActionHistoryResponse getHistory(
             @RequestParam(required = false) String search,
+            @RequestParam(required = false) String timeZone,
             @RequestParam(defaultValue = "all")
             @Pattern(regexp = "all|ledGreen|ledRed|LED_GREEN|LED_RED", message = "Unsupported device key.")
             String device,
@@ -42,7 +43,7 @@ public class ActionHistoryController {
             @Pattern(regexp = "all|ON|OFF|on|off", message = "Unsupported action.")
             String action,
             @RequestParam(defaultValue = "all")
-            @Pattern(regexp = "all|PENDING|SUCCESS|FAILED|pending|success|failed", message = "Unsupported status.")
+            @Pattern(regexp = "all|SUCCESS|FAILED|success|failed", message = "Unsupported status.")
             String status,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startTime,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endTime,
@@ -52,6 +53,6 @@ public class ActionHistoryController {
             @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize
     ) {
         return actionHistoryQueryService.getHistory(
-                search, device, action, status, startTime, endTime, sortBy, sortOrder, page, pageSize);
+                search, timeZone, device, action, status, startTime, endTime, sortBy, sortOrder, page, pageSize);
     }
 }

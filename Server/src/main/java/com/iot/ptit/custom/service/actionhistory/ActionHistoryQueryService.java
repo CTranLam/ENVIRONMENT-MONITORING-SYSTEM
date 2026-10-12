@@ -10,7 +10,6 @@ import com.iot.ptit.custom.enums.DeviceActionType;
 import com.iot.ptit.custom.repository.auth.AppUserRepository;
 import com.iot.ptit.custom.repository.device.ActionHistoryRepository;
 import com.iot.ptit.custom.repository.device.DeviceRepository;
-import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -22,6 +21,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.DateTimeException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -35,13 +40,14 @@ import java.util.stream.Collectors;
  * Read-only query service backing the Action History page.
  *
  * <p>Replaces the mock data engine that previously lived in the web client: every filter
- * (search, device, action, status, time range), sort key and page is translated into a
+ * (time search, device, action, status), sort key and page is translated into a
  * single paginated query over {@code action_history}.</p>
  */
 @Service
 @RequiredArgsConstructor
 public class ActionHistoryQueryService {
     private static final int MAX_PAGE_SIZE = 100;
+    private static final DateTimeFormatter DISPLAY_TIMESTAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     /** Sort keys accepted from the web client, mapped to entity paths. */
     private static final Map<String, String> SORT_PATHS = Map.of(
@@ -68,6 +74,7 @@ public class ActionHistoryQueryService {
     @Transactional(readOnly = true)
     public PaginatedActionHistoryResponse getHistory(
             String search,
+            String timeZone,
             String deviceKey,
             String action,
             String status,
@@ -82,7 +89,7 @@ public class ActionHistoryQueryService {
         int safePageSize = Math.clamp(pageSize, 1, MAX_PAGE_SIZE);
 
         Specification<ActionHistory> specification = buildSpecification(
-                search, parseDeviceName(deviceKey), parseAction(action), parseStatus(status), startTime, endTime);
+                search, parseTimeRange(search, timeZone), parseDeviceName(deviceKey), parseAction(action), parseStatus(status), startTime, endTime);
         Pageable pageable = PageRequest.of(safePage - 1, safePageSize, buildSort(sortBy, sortOrder));
 
         Page<ActionHistory> result = actionHistoryRepository.findAll(specification, pageable);
@@ -117,6 +124,7 @@ public class ActionHistoryQueryService {
 
     private Specification<ActionHistory> buildSpecification(
             String search,
+            TimeRange searchedTimeRange,
             String deviceName,
             DeviceActionType action,
             ActionStatus status,
@@ -127,24 +135,14 @@ public class ActionHistoryQueryService {
             List<Predicate> predicates = new ArrayList<>();
 
             if (search != null && !search.isBlank()) {
-                String trimmed = search.trim();
-                String pattern = "%" + trimmed.toLowerCase(Locale.ROOT) + "%";
-                // The optional actor is joined for the "sent by" search; a LEFT join keeps
-                // system triggered rows (user_id = NULL) visible.
-                var userJoin = root.join("user", JoinType.LEFT);
-                List<Predicate> searchPredicates = new ArrayList<>();
-                searchPredicates.add(criteriaBuilder.like(
-                        criteriaBuilder.lower(root.get("device").get("deviceName")), pattern));
-                searchPredicates.add(criteriaBuilder.like(
-                        criteriaBuilder.lower(userJoin.get("fullName")), pattern));
-
-                // UUID input matches the primary key exactly instead of casting it to text.
-                UUID searchId = parseUuid(trimmed);
-                if (searchId != null) {
-                    searchPredicates.add(criteriaBuilder.equal(root.get("id"), searchId));
-                    searchPredicates.add(criteriaBuilder.equal(root.get("device").get("id"), searchId));
+                if (searchedTimeRange != null) {
+                    predicates.add(criteriaBuilder.and(
+                            criteriaBuilder.greaterThanOrEqualTo(root.get("actionAt"), searchedTimeRange.start()),
+                            criteriaBuilder.lessThan(root.get("actionAt"), searchedTimeRange.endExclusive())));
+                } else {
+                    // The Action History search field deliberately accepts only timestamps.
+                    predicates.add(criteriaBuilder.disjunction());
                 }
-                predicates.add(criteriaBuilder.or(searchPredicates.toArray(new Predicate[0])));
             }
 
             if (deviceName != null) {
@@ -215,13 +213,42 @@ public class ActionHistoryQueryService {
         }
     }
 
-    private UUID parseUuid(String value) {
+    /** Parses a copied client timestamp in the browser's IANA timezone. */
+    private TimeRange parseTimeRange(String search, String timeZone) {
+        if (search == null || search.isBlank()) {
+            return null;
+        }
+        ZoneId zoneId = parseZoneId(timeZone);
+        String value = search.trim();
         try {
-            return UUID.fromString(value);
-        } catch (IllegalArgumentException exception) {
+            LocalDate date = LocalDate.parse(value);
+            return new TimeRange(date.atStartOfDay(zoneId).toInstant(), date.plusDays(1).atStartOfDay(zoneId).toInstant());
+        } catch (DateTimeParseException ignored) {
+            // Continue with the more specific formats below.
+        }
+        try {
+            Instant instant = Instant.parse(value);
+            return new TimeRange(instant, instant.plusSeconds(1));
+        } catch (DateTimeParseException ignored) {
+            // Continue with the timestamp presentation format.
+        }
+        try {
+            Instant instant = LocalDateTime.parse(value, DISPLAY_TIMESTAMP).atZone(zoneId).toInstant();
+            return new TimeRange(instant, instant.plusSeconds(1));
+        } catch (DateTimeParseException ignored) {
             return null;
         }
     }
+
+    private ZoneId parseZoneId(String timeZone) {
+        try {
+            return timeZone == null || timeZone.isBlank() ? ZoneId.of("UTC") : ZoneId.of(timeZone);
+        } catch (DateTimeException exception) {
+            return ZoneId.of("UTC");
+        }
+    }
+
+    private record TimeRange(Instant start, Instant endExclusive) { }
 
     private ActionHistoryRecordResponse toResponse(ActionHistory history, Device device, AppUser user) {
         String deviceName = device == null ? "UNKNOWN" : device.getDeviceName();

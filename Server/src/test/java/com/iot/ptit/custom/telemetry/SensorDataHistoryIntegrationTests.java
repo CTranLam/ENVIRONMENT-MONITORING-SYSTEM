@@ -10,6 +10,7 @@ import com.iot.ptit.custom.repository.device.ActionHistoryRepository;
 import com.iot.ptit.custom.repository.device.DeviceRepository;
 import com.iot.ptit.custom.repository.telemetry.SensorDataRepository;
 import com.iot.ptit.custom.repository.telemetry.SensorRepository;
+import com.iot.ptit.custom.service.telemetry.TelemetryRetentionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +22,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -44,6 +47,9 @@ class SensorDataHistoryIntegrationTests {
 
     @Autowired
     private SensorDataRepository sensorDataRepository;
+
+    @Autowired
+    private TelemetryRetentionService telemetryRetentionService;
 
     @Autowired
     private AppUserRepository appUserRepository;
@@ -160,6 +166,41 @@ class SensorDataHistoryIntegrationTests {
     }
 
     @Test
+    void filtersByExactSensorValueForOneTypeAndAllTypes() throws Exception {
+        mockMvc.perform(get("/api/sensors/history")
+                        .param("type", "humidity")
+                        .param("search", "73")
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(1))
+                .andExpect(jsonPath("$.items[0].sensorType").value("HUMIDITY"))
+                .andExpect(jsonPath("$.items[0].value").value(73.0));
+
+        mockMvc.perform(get("/api/sensors/history")
+                        .param("type", "all")
+                        .param("search", "73")
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(1))
+                .andExpect(jsonPath("$.items[0].sensorType").value("HUMIDITY"));
+    }
+
+    @Test
+    void filtersAllTypesByTimestampCopiedFromTheTable() throws Exception {
+        String displayedTimestamp = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+                .withZone(ZoneOffset.UTC)
+                .format(baseTime);
+
+        mockMvc.perform(get("/api/sensors/history")
+                        .param("type", "all")
+                        .param("search", displayedTimestamp)
+                        .param("timeZone", "UTC")
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(2));
+    }
+
+    @Test
     void filtersByTimeRange() throws Exception {
         mockMvc.perform(get("/api/sensors/history")
                         .param("startTime", baseTime.minusSeconds(60).toString())
@@ -226,5 +267,20 @@ class SensorDataHistoryIntegrationTests {
                 .andExpect(jsonPath("$.items[0].sensorName").value("Humidity"));
 
         assertThat(sensorDataRepository.count()).isEqualTo(3);
+    }
+
+    @Test
+    void removesOnlyTelemetryOlderThanSevenDays() {
+        SensorData expired = sensorDataRepository.save(new SensorData(
+                temperature, 28.0, baseTime.minus(8, ChronoUnit.DAYS)));
+        SensorData atRetentionBoundary = sensorDataRepository.save(new SensorData(
+                temperature, 28.5, baseTime.minus(7, ChronoUnit.DAYS)));
+
+        int deleted = telemetryRetentionService.purgeExpiredTelemetry(baseTime);
+
+        assertThat(deleted).isEqualTo(1);
+        assertThat(sensorDataRepository.existsById(expired.getId())).isFalse();
+        assertThat(sensorDataRepository.existsById(atRetentionBoundary.getId())).isTrue();
+        assertThat(sensorDataRepository.count()).isEqualTo(4);
     }
 }

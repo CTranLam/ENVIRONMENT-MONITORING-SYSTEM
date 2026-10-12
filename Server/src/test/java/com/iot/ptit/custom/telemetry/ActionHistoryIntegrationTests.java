@@ -21,6 +21,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
@@ -77,7 +79,7 @@ class ActionHistoryIntegrationTests {
         baseTime = Instant.now().truncatedTo(ChronoUnit.MILLIS);
         actionHistoryRepository.save(history(ledGreen, operator, DeviceActionType.ON, ActionStatus.SUCCESS, baseTime.minusSeconds(120)));
         actionHistoryRepository.save(history(ledGreen, operator, DeviceActionType.OFF, ActionStatus.SUCCESS, baseTime.minusSeconds(60)));
-        actionHistoryRepository.save(history(ledRed, operator, DeviceActionType.ON, ActionStatus.PENDING, baseTime));
+        actionHistoryRepository.save(history(ledRed, operator, DeviceActionType.ON, ActionStatus.FAILED, baseTime));
 
         MvcResult login = mockMvc.perform(post("/api/auth/login")
                         .contentType("application/json")
@@ -107,7 +109,7 @@ class ActionHistoryIntegrationTests {
                 .andExpect(jsonPath("$.items[0].device").value("LED Red"))
                 .andExpect(jsonPath("$.items[0].deviceKey").value("ledRed"))
                 .andExpect(jsonPath("$.items[0].action").value("ON"))
-                .andExpect(jsonPath("$.items[0].status").value("PENDING"))
+                .andExpect(jsonPath("$.items[0].status").value("FAILED"))
                 .andExpect(jsonPath("$.items[0].sentBy").value("Trần Quang Lâm"))
                 .andExpect(jsonPath("$.items[0].deviceId").value(ledRed.getId().toString()))
                 .andExpect(jsonPath("$.items[0].timestamp").isNotEmpty());
@@ -146,36 +148,31 @@ class ActionHistoryIntegrationTests {
                 .andExpect(jsonPath("$.items[0].action").value("OFF"));
 
         mockMvc.perform(get("/api/actions/history")
-                        .param("status", "PENDING")
+                        .param("status", "FAILED")
                         .header("Authorization", "Bearer " + accessToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.total").value(1))
-                .andExpect(jsonPath("$.items[0].status").value("PENDING"));
+                .andExpect(jsonPath("$.items[0].status").value("FAILED"));
     }
 
     @Test
-    void searchesByDeviceNameActorAndUuid() throws Exception {
+    void searchesOnlyByTimestampCopiedFromTheTable() throws Exception {
+        String displayedTimestamp = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+                .withZone(ZoneOffset.UTC)
+                .format(baseTime);
         mockMvc.perform(get("/api/actions/history")
-                        .param("search", "red")
-                        .header("Authorization", "Bearer " + accessToken))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.total").value(1));
-
-        mockMvc.perform(get("/api/actions/history")
-                        .param("search", "quang lâm")
-                        .header("Authorization", "Bearer " + accessToken))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.total").value(3));
-
-        ActionHistory latest = actionHistoryRepository.findAll().stream()
-                .max((first, second) -> first.getActionAt().compareTo(second.getActionAt()))
-                .orElseThrow();
-        mockMvc.perform(get("/api/actions/history")
-                        .param("search", latest.getId().toString())
+                        .param("search", displayedTimestamp)
+                        .param("timeZone", "UTC")
                         .header("Authorization", "Bearer " + accessToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.total").value(1))
-                .andExpect(jsonPath("$.items[0].id").value(latest.getId().toString()));
+                .andExpect(jsonPath("$.items[0].timestamp").isNotEmpty());
+
+        mockMvc.perform(get("/api/actions/history")
+                        .param("search", "LED_GREEN")
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(0));
     }
 
     @Test

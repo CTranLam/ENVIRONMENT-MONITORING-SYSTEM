@@ -35,6 +35,7 @@ public class SensorDataController {
     @Operation(summary = "Query persisted sensor telemetry with paging, filtering and sorting")
     public PaginatedSensorDataResponse getHistory(
             @RequestParam(required = false) String search,
+            @RequestParam(required = false) String timeZone,
             @RequestParam(defaultValue = "all")
             @Pattern(regexp = "all|temperature|humidity|light|TEMPERATURE|HUMIDITY|LIGHT", message = "Unsupported sensor type.")
             String type,
@@ -46,6 +47,6 @@ public class SensorDataController {
             @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize
     ) {
         return sensorDataQueryService.getHistory(
-                search, type, startTime, endTime, sortBy, sortOrder, page, pageSize);
+                search, timeZone, type, startTime, endTime, sortBy, sortOrder, page, pageSize);
     }
 }

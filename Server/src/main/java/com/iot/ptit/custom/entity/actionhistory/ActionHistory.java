@@ -44,7 +44,7 @@ public class ActionHistory extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private ActionStatus status = ActionStatus.PENDING;
+    private ActionStatus status = ActionStatus.SUCCESS;
 
     /**
      * Business timestamp: when the control action was requested.

@@ -52,14 +52,15 @@ public class DeviceControlService {
      *
      * <p>The audit row is committed in its own transaction before the MQTT command is
      * published, so a broker outage can never roll back (and silently lose) the audit
-     * trail. If the publish fails the row is flipped to {@code FAILED} and the caller
-     * receives a 503 instead of an optimistic {@code PENDING} status.</p>
+     * trail. A publish starts as {@code SUCCESS}; if it fails the row is flipped to
+     * {@code FAILED} and the caller receives a 503.</p>
      */
     public DeviceStatusResponse command(UUID userId, DeviceControlRequest request) {
         String deviceName = toDeviceName(request.deviceKey());
         DeviceActionType action = request.targetState() ? DeviceActionType.ON : DeviceActionType.OFF;
 
-        // Step 1: commit the PENDING audit row in an isolated transaction.
+        // Step 1: commit the audit row in an isolated transaction. Its default status
+        // is SUCCESS because broker delivery is the observable completion criterion.
         ActionHistory history = inNewTransaction(() -> {
             Device device = deviceRepository.findByDeviceNameAndDeletedFalse(deviceName)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Device was not found."));
@@ -80,7 +81,7 @@ public class DeviceControlService {
                     "The device command could not be delivered to the MQTT broker.");
         }
 
-        return new DeviceStatusResponse(request.deviceKey(), request.targetState(), "PENDING");
+        return new DeviceStatusResponse(request.deviceKey(), request.targetState(), "SUCCESS");
     }
 
     @EventListener
@@ -94,17 +95,12 @@ public class DeviceControlService {
         DeviceStatus status = "ON".equals(payload.status()) ? DeviceStatus.ON
                 : "OFF".equals(payload.status()) ? DeviceStatus.OFF : DeviceStatus.UNKNOWN;
         device.setCurrentStatus(status);
-        if (status != DeviceStatus.UNKNOWN) {
-            DeviceActionType action = status == DeviceStatus.ON ? DeviceActionType.ON : DeviceActionType.OFF;
-            actionHistoryRepository.findFirstByDevice_IdAndActionAndStatusOrderByCreatedAtDesc(
-                    device.getId(), action, ActionStatus.PENDING).ifPresent(history -> history.setStatus(ActionStatus.SUCCESS));
-        }
         DeviceStatusResponse response = toResponse(device);
         messagingTemplate.convertAndSend("/topic/device-status", response);
     }
 
     /**
-     * Record a delivery failure on an already committed PENDING row. Runs in its own
+     * Record a delivery failure on an already committed audit row. Runs in its own
      * transaction so it commits independently from the failed command flow.
      */
     private void markActionFailed(ActionHistory history, UUID userId) {
