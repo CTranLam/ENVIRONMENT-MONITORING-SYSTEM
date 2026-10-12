@@ -3,7 +3,6 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { Avatar, Button } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
 import { useProfile } from '@/features/profile';
-import { useAlerts, AlertPopupModal } from '@/features/alerts';
 import { useDashboardTelemetry } from '@/features/dashboard';
 import { useAuth } from '@/features/auth';
 import { useAppSelector } from '@/app/hooks';
@@ -13,15 +12,8 @@ export const MainLayout: React.FC = () => {
   const location = useLocation();
   const { profile } = useProfile();
   const { signOut } = useAuth();
-  // Duy trì kết nối realtime (telemetry + heartbeat ESP8266) cho toàn bộ app,
-  // để popup cảnh báo mất kết nối hoạt động trên mọi trang.
+  // Duy trì kết nối realtime (telemetry + heartbeat ESP8266) cho toàn bộ app.
   useDashboardTelemetry();
-  const {
-    currentPopupAlert,
-    dismissAlert,
-    handleAlertAction,
-    retryConnection,
-  } = useAlerts({ initialize: true });
   const espOnline = useAppSelector((state) => state.dashboard.espOnline);
 
   const navItems = [
@@ -120,14 +112,6 @@ export const MainLayout: React.FC = () => {
           <span className="opacity-90">v1.0.0</span>
         </div>
       </footer>
-
-      {/* Modal Popup Cảnh Báo Toàn Cục (Hiển thị chính giữa màn hình) */}
-      <AlertPopupModal
-        alert={currentPopupAlert}
-        onDismiss={dismissAlert}
-        onAlertAction={handleAlertAction}
-        onRetryConnection={retryConnection}
-      />
     </div>
   );
 };

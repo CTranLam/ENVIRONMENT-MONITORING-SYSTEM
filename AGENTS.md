@@ -34,7 +34,7 @@ ENVIRONMENT-MONITORING-SYSTEM/
 │   ├── AGENTS.md             # Hướng dẫn riêng cho Frontend
 │   ├── src/
 │   │   ├── app/              # Redux store & typed hooks
-│   │   ├── features/         # Feature-Based Architecture (dashboard, monitoring, action-history, alerts, profile)
+│   │   ├── features/         # Feature-Based Architecture (dashboard, monitoring, action-history, profile)
 │   │   ├── layouts/          # MainLayout (Header, Footer với trạng thái ESP8266)
 │   │   ├── routes/           # Cấu hình AppRoutes
 │   │   └── services/         # Axios apiClient cấu hình baseURL & JWT interceptor
@@ -86,7 +86,7 @@ Hệ thống được thiết kế theo mô hình 4 tầng tương tác khép k�
    {"deviceKey": "ledGreen", "targetState": true}
    ```
 3. Backend `DeviceControlService.command()`:
-   - Lưu bản ghi mới vào bảng `action_history` với trạng thái ban đầu là `PENDING`.
+   - Lưu bản ghi mới vào bảng `action_history` với trạng thái `SUCCESS`; nếu publish MQTT thất bại, bản ghi chuyển thành `FAILED`.
    - Bắn chuỗi lệnh thô tương ứng sang MQTT topic **`home/led/control`**: `"GREEN_ON"`, `"GREEN_OFF"`, `"RED_ON"`, `"RED_OFF"`.
    - Trả về phản hồi `DeviceStatusResponse` cho HTTP request.
 4. ESP8266 nhận lệnh qua callback MQTT:
@@ -97,7 +97,6 @@ Hệ thống được thiết kế theo mô hình 4 tầng tương tác khép k�
      ```
 5. Backend `MqttTelemetrySubscriber` nhận gói tin status:
    - Cập nhật trạng thái `current_status` trong bảng `devices`.
-   - Cập nhật bản ghi `action_history` từ `PENDING` sang `SUCCESS`.
    - Bắn tin qua STOMP WebSocket tới topic **`/topic/device-status`**.
 6. Frontend nhận tin qua WebSocket, Redux dispatch `setDeviceStatus`: công tắc dừng loading và chính thức chuyển màu sang trạng thái bật/tắt mới.
 
@@ -156,8 +155,8 @@ Hệ thống sử dụng **PostgreSQL 16**, quản lý lược đồ tự độn
 | `user_permission` | `UserPermission` | Phân quyền chi tiết | Lưu quyền cụ thể theo `user_id`. |
 | `devices` | `Device` | Danh mục thiết bị chấp hành | Seed sẵn 2 thiết bị: `LED_GREEN` (D1) và `LED_RED` (D2). Cột `current_status` (`ON`, `OFF`, `UNKNOWN`). |
 | `sensors` | `Sensor` | Danh mục cảm biến | Seed sẵn 3 cảm biến: `TEMPERATURE`, `HUMIDITY`, `LIGHT`. |
-| `sensor_data` | `SensorData` | Dữ liệu đo đạc cảm biến | **Không kế thừa BaseEntity**, append-only time-series, đánh index `(sensor_id, recorded_at DESC)`. |
-| `action_history` | `ActionHistory` | Lịch sử thao tác thiết bị | Lưu `device_id`, `user_id`, `action` (`ON`/`OFF`), `trigger_by` (`MANUAL`/`AUTOMATION`/`SYSTEM`), `status` (`PENDING`/`SUCCESS`/`FAILED`), và **`action_at`** — mốc thời gian nghiệp vụ dùng để lọc/sắp xếp (khác `created_at`/`updated_at` là cột audit bị Hibernate ghi đè). Index `(action_at DESC)`, `(device_id, action_at DESC)`. |
+| `sensor_data` | `SensorData` | Dữ liệu đo đạc cảm biến | **Không kế thừa BaseEntity**, append-only time-series, đánh index `(sensor_id, recorded_at DESC)` và `(recorded_at DESC)`. Raw telemetry được giữ 7 ngày, sau đó job hằng ngày xóa theo lô 10.000 bản ghi. |
+| `action_history` | `ActionHistory` | Lịch sử thao tác thiết bị | Lưu `device_id`, `user_id`, `action` (`ON`/`OFF`), `trigger_by` (`MANUAL`/`AUTOMATION`/`SYSTEM`), `status` (`SUCCESS`/`FAILED`), và **`action_at`** — mốc thời gian nghiệp vụ dùng để lọc/sắp xếp (khác `created_at`/`updated_at` là cột audit bị Hibernate ghi đè). Index `(action_at DESC)`, `(device_id, action_at DESC)`. |
 
 ---
 
@@ -275,4 +274,10 @@ docker ps
 2. Không chỉnh sửa các file Flyway migration đã chạy trên production hoặc commit trước đó; luôn tạo migration mới theo thứ tự phiên bản tiếp theo.
 3. Luôn bảo tồn tài liệu, docstrings và comments giải thích logic phức tạp.
 4. Cập nhật file `AGENTS.md` này bất cứ khi nào có thay đổi mang tính kiến trúc, giao thức truyền thông, hoặc cấu trúc database.
+
+### 9.1. Chính sách lưu giữ telemetry
+
+* Dữ liệu thô ở `sensor_data` chỉ phục vụ màn hình Sensor Data và biểu đồ thời gian thực, nên mặc định giữ **7 ngày**.
+* `TelemetryRetentionService` chạy lúc 02:15 UTC mỗi ngày và xóa các bản ghi cũ theo transaction từng lô, mặc định 10.000 dòng/lô. Không áp dụng chính sách này cho `action_history`.
+* Có thể cấu hình qua `TELEMETRY_RETENTION_DAYS`, `TELEMETRY_CLEANUP_BATCH_SIZE`, `TELEMETRY_CLEANUP_CRON`, và `TELEMETRY_CLEANUP_ZONE`; thay đổi thời gian giữ phải được cân nhắc theo dung lượng PostgreSQL và nhu cầu báo cáo.
 

@@ -15,8 +15,6 @@ interface SensorChartCardProps {
   color: string;
   iconBg: string;
   icon: React.ReactNode;
-  maxThreshold?: number;
-  minThreshold?: number;
   yMin: number;
   yMax: number;
   yTicks: number[];
@@ -54,8 +52,6 @@ export const SensorChartCard: React.FC<SensorChartCardProps> = ({
   color,
   iconBg,
   icon,
-  maxThreshold,
-  minThreshold,
   yMin,
   yMax,
   yTicks,
@@ -98,18 +94,6 @@ export const SensorChartCard: React.FC<SensorChartCardProps> = ({
     const ratio = Math.max(0, Math.min(1, (svgX - paddingLeft) / chartWidth));
     setHoveredIndex(Math.round(ratio * (data.length - 1)));
   };
-
-  // Tính tọa độ Y của đường ngưỡng trên (Max Threshold)
-  const maxThresholdY =
-    maxThreshold !== undefined && maxThreshold >= yMin && maxThreshold <= yMax
-      ? paddingTop + (1 - (maxThreshold - yMin) / (yMax - yMin)) * chartHeight
-      : undefined;
-
-  // Tính tọa độ Y của đường ngưỡng dưới (Min Threshold)
-  const minThresholdY =
-    minThreshold !== undefined && minThreshold >= yMin && minThreshold <= yMax
-      ? paddingTop + (1 - (minThreshold - yMin) / (yMax - yMin)) * chartHeight
-      : undefined;
 
   return (
     <div className="bg-white rounded-[24px] border-[1.5px] border-solid border-[#e2e8f0] px-5 py-4 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex items-center gap-4 w-full box-border flex-1 min-h-[180px]">
@@ -173,47 +157,30 @@ export const SensorChartCard: React.FC<SensorChartCardProps> = ({
           {yTicks.map((tick) => {
             const tickY = paddingTop + (1 - (tick - yMin) / (yMax - yMin)) * chartHeight;
             return (
-              <text
-                key={tick}
-                x={paddingLeft - 8}
-                y={tickY + 4}
-                textAnchor="end"
-                fontSize={10}
-                fill="#94a3b8"
-                fontWeight={500}
-              >
-                {tick}
-              </text>
+              <g key={tick}>
+                <line
+                  x1={paddingLeft}
+                  y1={tickY}
+                  x2={svgWidth - paddingRight}
+                  y2={tickY}
+                  stroke="#cbd5e1"
+                  strokeWidth={1}
+                  strokeDasharray="4 4"
+                  strokeOpacity={0.8}
+                />
+                <text
+                  x={paddingLeft - 8}
+                  y={tickY + 4}
+                  textAnchor="end"
+                  fontSize={10}
+                  fill="#94a3b8"
+                  fontWeight={500}
+                >
+                  {tick}
+                </text>
+              </g>
             );
           })}
-
-          {/* Đường nét đứt hiển thị NGƯỠNG TRÊN (Max Threshold Line) */}
-          {maxThresholdY !== undefined && (
-            <line
-              x1={paddingLeft}
-              y1={maxThresholdY}
-              x2={svgWidth - paddingRight}
-              y2={maxThresholdY}
-              stroke="#ef4444"
-              strokeWidth={1.5}
-              strokeDasharray="5 4"
-              strokeOpacity={0.85}
-            />
-          )}
-
-          {/* Đường nét đứt hiển thị NGƯỠNG DƯỚI (Min Threshold Line) */}
-          {minThresholdY !== undefined && (
-            <line
-              x1={paddingLeft}
-              y1={minThresholdY}
-              x2={svgWidth - paddingRight}
-              y2={minThresholdY}
-              stroke="#3b82f6"
-              strokeWidth={1.5}
-              strokeDasharray="5 4"
-              strokeOpacity={0.85}
-            />
-          )}
 
           {/* Đường cong dữ liệu mềm mại (Spline curve) */}
           <path

@@ -37,12 +37,9 @@ export const sensorDataSlice = createSlice({
   name: 'sensorData',
   initialState,
   reducers: {
-    setSearch: (state, action: PayloadAction<string>) => {
-      state.filters.search = action.payload;
-      state.filters.page = 1; // Reset về trang 1 khi tìm kiếm
-    },
-    setTypeFilter: (state, action: PayloadAction<SensorFilterType>) => {
-      state.filters.type = action.payload;
+    applySearch: (state, action: PayloadAction<{ search: string; type: SensorFilterType }>) => {
+      state.filters.search = action.payload.search;
+      state.filters.type = action.payload.type;
       state.filters.page = 1; // Reset về trang 1 khi lọc loại
     },
     setTimeRange: (
@@ -99,7 +96,7 @@ export const sensorDataSlice = createSlice({
   },
 });
 
-export const { setSearch, setTypeFilter, setTimeRange, setSorting, setPage, setPageSize, resetFilters } =
+export const { applySearch, setTimeRange, setSorting, setPage, setPageSize, resetFilters } =
   sensorDataSlice.actions;
 
 export const sensorDataReducer = sensorDataSlice.reducer;

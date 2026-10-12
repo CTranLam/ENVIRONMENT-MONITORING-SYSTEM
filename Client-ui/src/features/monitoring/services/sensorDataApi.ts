@@ -114,6 +114,7 @@ export const sensorDataApi = {
     const response = await apiClient.get<unknown>('/sensors/history', {
       params: {
         search: filters.search,
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         type: filters.type,
         startTime: toInstantParam(filters.startTime),
         endTime: toInstantParam(filters.endTime),

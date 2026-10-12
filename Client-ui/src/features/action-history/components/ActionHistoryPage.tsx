@@ -21,7 +21,6 @@ export const ActionHistoryPage: React.FC = () => {
     handleDeviceChange,
     handleActionChange,
     handleStatusChange,
-    handleTimeRangeChange,
     handleSortSelect,
     handleColumnSort,
     handlePageChange,
@@ -40,9 +39,6 @@ export const ActionHistoryPage: React.FC = () => {
         onActionChange={handleActionChange}
         selectedStatus={filters.status}
         onStatusChange={handleStatusChange}
-        startTime={filters.startTime}
-        endTime={filters.endTime}
-        onTimeRangeChange={handleTimeRangeChange}
         selectedSortKey={currentSortKey}
         onSortSelect={handleSortSelect}
       />
@@ -63,6 +59,7 @@ export const ActionHistoryPage: React.FC = () => {
         records={items}
         loading={isLoading}
         startEntry={startEntry}
+        pageSize={filters.pageSize}
         sortBy={filters.sortBy}
         sortOrder={filters.sortOrder}
         onColumnSort={handleColumnSort}

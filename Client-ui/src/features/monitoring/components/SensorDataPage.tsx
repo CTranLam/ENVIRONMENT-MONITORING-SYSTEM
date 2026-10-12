@@ -17,9 +17,10 @@ export const SensorDataPage: React.FC = () => {
     startEntry,
     endEntry,
     currentSortKey,
+    selectedSearchType,
     handleSearchChange,
+    handleSearchSubmit,
     handleTypeChange,
-    handleTimeRangeChange,
     handleSortSelect,
     handleColumnSort,
     handlePageChange,
@@ -32,11 +33,9 @@ export const SensorDataPage: React.FC = () => {
       <SensorDataFilterBar
         searchInput={searchInput}
         onSearchChange={handleSearchChange}
-        selectedType={filters.type}
+        onSearchSubmit={handleSearchSubmit}
+        selectedType={selectedSearchType}
         onTypeChange={handleTypeChange}
-        startTime={filters.startTime}
-        endTime={filters.endTime}
-        onTimeRangeChange={handleTimeRangeChange}
         selectedSortKey={currentSortKey}
         onSortSelect={handleSortSelect}
       />
@@ -57,6 +56,7 @@ export const SensorDataPage: React.FC = () => {
         records={items}
         loading={isLoading}
         startEntry={startEntry}
+        pageSize={filters.pageSize}
         sortBy={filters.sortBy}
         sortOrder={filters.sortOrder}
         onColumnSort={handleColumnSort}

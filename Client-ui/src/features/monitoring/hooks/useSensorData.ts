@@ -1,16 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import {
+  applySearch,
   fetchSensorDataThunk,
-  setSearch,
-  setTypeFilter,
-  setTimeRange,
   setSorting,
   setPage,
   setPageSize,
 } from '@/features/monitoring/slices/sensorDataSlice';
 import type {
-  SensorFilterType,
+  SensorSearchType,
   SensorSortKey,
   SortField,
   SortOrder,
@@ -23,39 +21,33 @@ export const useSensorData = () => {
   );
 
   const [searchInput, setSearchInput] = useState(filters.search);
-  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [selectedSearchType, setSelectedSearchType] = useState<SensorSearchType>(filters.type);
 
   useEffect(() => {
     setSearchInput(filters.search);
   }, [filters.search]);
 
-  // Debounce search input sang Redux
+  // Keep draft search text local. The server query starts only when the user submits it.
   const handleSearchChange = useCallback(
     (value: string) => {
       setSearchInput(value);
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-      debounceTimerRef.current = setTimeout(() => {
-        dispatch(setSearch(value));
-      }, 300);
     },
-    [dispatch]
+    []
   );
 
-  // Xử lý đổi filter loại cảm biến
+  const handleSearchSubmit = useCallback(() => {
+    dispatch(applySearch({
+      search: searchInput,
+      type: selectedSearchType === 'time' ? 'all' : selectedSearchType,
+    }));
+  }, [dispatch, searchInput, selectedSearchType]);
+
+  // Changing the dropdown updates the draft only; it does not reload the table.
   const handleTypeChange = useCallback(
-    (value: SensorFilterType) => {
-      dispatch(setTypeFilter(value));
+    (value: SensorSearchType) => {
+      setSelectedSearchType(value);
     },
-    [dispatch]
-  );
-
-  const handleTimeRangeChange = useCallback(
-    (startTime: string | null, endTime: string | null) => {
-      dispatch(setTimeRange({ startTime, endTime }));
-    },
-    [dispatch]
+    []
   );
 
   // Xử lý đổi tiêu chí sắp xếp từ Sort dropdown
@@ -106,15 +98,6 @@ export const useSensorData = () => {
     filters,
   ]);
 
-  // Clean timer khi unmount
-  useEffect(() => {
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-    };
-  }, []);
-
   const totalPages = Math.max(1, Math.ceil(total / filters.pageSize));
   const startEntry = total === 0 ? 0 : (filters.page - 1) * filters.pageSize + 1;
   const endEntry = Math.min(filters.page * filters.pageSize, total);
@@ -133,9 +116,10 @@ export const useSensorData = () => {
     startEntry,
     endEntry,
     currentSortKey,
+    selectedSearchType,
     handleSearchChange,
+    handleSearchSubmit,
     handleTypeChange,
-    handleTimeRangeChange,
     handleSortSelect,
     handleColumnSort,
     handlePageChange,

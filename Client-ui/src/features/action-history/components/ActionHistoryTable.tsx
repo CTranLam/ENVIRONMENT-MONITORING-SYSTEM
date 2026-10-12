@@ -1,5 +1,5 @@
 import React from 'react';
-import { Spin, Empty, Tooltip, message } from 'antd';
+import { Spin, Tooltip, message } from 'antd';
 import {
   ThunderboltOutlined,
   BulbOutlined,
@@ -9,7 +9,6 @@ import {
   SwapOutlined,
   CheckCircleFilled,
   CloseCircleFilled,
-  ClockCircleOutlined,
   UserOutlined,
 } from '@ant-design/icons';
 import type {
@@ -25,6 +24,7 @@ interface ActionHistoryTableProps {
   records: ActionHistoryRecord[];
   loading: boolean;
   startEntry: number;
+  pageSize: number;
   sortBy: ActionSortField;
   sortOrder: ActionSortOrder;
   onColumnSort: (field: ActionSortField) => void;
@@ -34,10 +34,14 @@ export const ActionHistoryTable: React.FC<ActionHistoryTableProps> = ({
   records,
   loading,
   startEntry,
+  pageSize,
   sortBy,
   sortOrder,
   onColumnSort,
 }) => {
+  // Keep filtered result sets looking like a table, not one large empty panel.
+  const placeholderRowCount = Math.max(0, Math.min(pageSize, 10) - records.length);
+
   const handleCopyId = (id: string) => {
     navigator.clipboard.writeText(id);
     message.success('Đã sao chép Device UUID!');
@@ -103,12 +107,11 @@ export const ActionHistoryTable: React.FC<ActionHistoryTableProps> = ({
     );
   };
 
-  // Badge hiển thị Status (SUCCESS / FAILED / PENDING)
+  // Badge hiển thị Status (SUCCESS / FAILED)
   const renderStatusBadge = (status: ActionStatus) => {
     const styles: Record<ActionStatus, string> = {
       SUCCESS: 'bg-emerald-50 text-emerald-700 border-emerald-200',
       FAILED: 'bg-red-50 text-red-600 border-red-200',
-      PENDING: 'bg-amber-50 text-amber-700 border-amber-200',
     };
     return (
       <span
@@ -116,7 +119,6 @@ export const ActionHistoryTable: React.FC<ActionHistoryTableProps> = ({
       >
         {status === 'SUCCESS' && <CheckCircleFilled className="text-emerald-500 text-xs" />}
         {status === 'FAILED' && <CloseCircleFilled className="text-red-500 text-xs" />}
-        {status === 'PENDING' && <ClockCircleOutlined className="text-amber-500 text-xs" />}
         <span>{status}</span>
       </span>
     );
@@ -177,12 +179,6 @@ export const ActionHistoryTable: React.FC<ActionHistoryTableProps> = ({
                     <Spin size="large" />
                     <span className="text-slate-400 text-[15px]">Đang tải lịch sử điều khiển...</span>
                   </div>
-                </td>
-              </tr>
-            ) : records.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="py-20 text-center">
-                  <Empty description="Không tìm thấy lịch sử điều khiển thiết bị phù hợp" />
                 </td>
               </tr>
             ) : (
@@ -250,6 +246,17 @@ export const ActionHistoryTable: React.FC<ActionHistoryTableProps> = ({
                 </tr>
               ))
             )}
+            {!loading && Array.from({ length: placeholderRowCount }, (_, index) => (
+              <tr
+                key={`placeholder-${index}`}
+                aria-hidden="true"
+                className={
+                  (records.length + index) % 2 === 1 ? 'bg-slate-50/35' : 'bg-white'
+                }
+              >
+                <td colSpan={7} className="h-[68px] p-0" />
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>

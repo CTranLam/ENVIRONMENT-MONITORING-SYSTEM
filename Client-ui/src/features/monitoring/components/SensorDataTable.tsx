@@ -1,5 +1,5 @@
 import React from 'react';
-import { Spin, Empty, Tooltip, message } from 'antd';
+import { Spin, Tooltip, message } from 'antd';
 import {
   FireOutlined,
   BulbOutlined,
@@ -25,6 +25,7 @@ interface SensorDataTableProps {
   records: SensorDataRecord[];
   loading: boolean;
   startEntry: number;
+  pageSize: number;
   sortBy: SortField;
   sortOrder: SortOrder;
   onColumnSort: (field: SortField) => void;
@@ -34,10 +35,15 @@ export const SensorDataTable: React.FC<SensorDataTableProps> = ({
   records,
   loading,
   startEntry,
+  pageSize,
   sortBy,
   sortOrder,
   onColumnSort,
 }) => {
+  // Keep short result sets visually structured: render white placeholder rows instead
+  // of leaving one large empty panel beneath the last real record.
+  const placeholderRowCount = Math.max(0, Math.min(pageSize, 10) - records.length);
+
   const handleCopyId = (id: string) => {
     navigator.clipboard.writeText(id);
     message.success('Đã sao chép UUID v7!');
@@ -165,12 +171,6 @@ export const SensorDataTable: React.FC<SensorDataTableProps> = ({
                   </div>
                 </td>
               </tr>
-            ) : records.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="py-20 text-center">
-                  <Empty description="Không tìm thấy dữ liệu cảm biến phù hợp" />
-                </td>
-              </tr>
             ) : (
               records.map((record, index) => (
                 <tr
@@ -217,6 +217,17 @@ export const SensorDataTable: React.FC<SensorDataTableProps> = ({
                 </tr>
               ))
             )}
+            {!loading && Array.from({ length: placeholderRowCount }, (_, index) => (
+              <tr
+                key={`placeholder-${index}`}
+                aria-hidden="true"
+                className={
+                  (records.length + index) % 2 === 1 ? 'bg-slate-50/35' : 'bg-white'
+                }
+              >
+                <td colSpan={5} className="h-[68px] p-0" />
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>

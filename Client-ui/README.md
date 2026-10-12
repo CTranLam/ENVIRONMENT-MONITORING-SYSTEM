@@ -12,7 +12,7 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173).
 
-When the backend is unavailable, Dashboard, Sensor Data, Action History and Profile fall back to local mock data.
+Tất cả các trang (Dashboard, Sensor Data, Action History, Profile) kết nối trực tiếp với Backend REST API và STOMP WebSocket, không sử dụng mock fallback. Khi backend không khả dụng, giao diện sẽ hiển thị trạng thái lỗi rõ ràng.
 
 ## Docker deployment
 

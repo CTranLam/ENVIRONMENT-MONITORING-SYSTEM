@@ -38,7 +38,6 @@ const DEVICE_KEYS: Record<string, DeviceType> = {
 const ACTION_VALUES: Record<string, DeviceAction> = { ON: 'ON', OFF: 'OFF' };
 
 const STATUS_VALUES: Record<string, ActionStatus> = {
-  PENDING: 'PENDING',
   SUCCESS: 'SUCCESS',
   FAILED: 'FAILED',
 };
@@ -127,6 +126,7 @@ export const actionHistoryApi = {
     const response = await apiClient.get<unknown>('/actions/history', {
       params: {
         search: filters.search,
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         device: filters.device,
         action: filters.action,
         status: filters.status,

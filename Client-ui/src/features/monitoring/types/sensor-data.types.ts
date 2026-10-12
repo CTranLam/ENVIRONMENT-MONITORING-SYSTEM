@@ -1,5 +1,6 @@
 export type SensorType = 'temperature' | 'humidity' | 'light';
 export type SensorFilterType = 'all' | SensorType;
+export type SensorSearchType = SensorFilterType | 'time';
 
 export type SortField = 'id' | 'name' | 'value' | 'timestamp';
 

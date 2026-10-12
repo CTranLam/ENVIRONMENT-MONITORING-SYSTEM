@@ -7,7 +7,6 @@ import {
 import { ControlPanel } from '@/features/dashboard/components/ControlPanel';
 import { SensorChartCard } from '@/features/dashboard/components/SensorChartCard';
 import { useDashboard } from '@/features/dashboard/hooks/useDashboard';
-import { useAlerts } from '@/features/alerts';
 
 const { Title } = Typography;
 
@@ -31,9 +30,6 @@ export const DashboardPage: React.FC = () => {
     pendingDeviceKey,
     telemetryConnection,
   } = useDashboard();
-
-  // Lấy ngưỡng cảnh báo an toàn từ useAlerts
-  const { thresholds } = useAlerts({ monitorTelemetry: true });
 
   return (
     <div className="w-full mx-auto p-0 box-border my-auto">
@@ -69,8 +65,6 @@ export const DashboardPage: React.FC = () => {
             color="#ef4444"
             iconBg="#fee2e2"
             icon={<FireOutlined style={{ fontSize: 24, color: '#ef4444' }} />}
-            minThreshold={thresholds.tempMin}
-            maxThreshold={thresholds.tempMax}
             yMin={0}
             yMax={45}
             yTicks={[0, 10, 15, 25, 30, 37, 45]}
@@ -86,8 +80,6 @@ export const DashboardPage: React.FC = () => {
             color="#0ea5e9"
             iconBg="#e0f2fe"
             icon={<DropletLargeIcon />}
-            minThreshold={thresholds.humidityMin}
-            maxThreshold={thresholds.humidityMax}
             yMin={0}
             yMax={100}
             yTicks={[0, 20, 35, 50, 65, 80, 100]}
@@ -103,8 +95,6 @@ export const DashboardPage: React.FC = () => {
             color="#f59e0b"
             iconBg="#fef3c7"
             icon={<BulbOutlined style={{ fontSize: 24, color: '#d97706' }} />}
-            minThreshold={thresholds.lightMin}
-            maxThreshold={thresholds.lightMax}
             yMin={0}
             yMax={1000}
             yTicks={[0, 100, 300, 500, 700, 850, 1000]}

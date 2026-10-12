@@ -1,7 +1,6 @@
 import React from 'react';
-import { DatePicker, Input, Select } from 'antd';
+import { Input, Select } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
-import dayjs from 'dayjs';
 import type {
   ActionHistoryActionFilter,
   ActionHistoryDeviceFilter,
@@ -18,9 +17,6 @@ interface ActionHistoryFilterBarProps {
   onActionChange: (value: ActionHistoryActionFilter) => void;
   selectedStatus: ActionHistoryStatusFilter;
   onStatusChange: (value: ActionHistoryStatusFilter) => void;
-  startTime: string | null;
-  endTime: string | null;
-  onTimeRangeChange: (startTime: string | null, endTime: string | null) => void;
   selectedSortKey: ActionHistorySortKey;
   onSortSelect: (key: ActionHistorySortKey) => void;
 }
@@ -34,9 +30,6 @@ export const ActionHistoryFilterBar: React.FC<ActionHistoryFilterBarProps> = ({
   onActionChange,
   selectedStatus,
   onStatusChange,
-  startTime,
-  endTime,
-  onTimeRangeChange,
   selectedSortKey,
   onSortSelect,
 }) => {
@@ -47,7 +40,7 @@ export const ActionHistoryFilterBar: React.FC<ActionHistoryFilterBarProps> = ({
         <Input
           value={searchInput}
           onChange={(e) => onSearchChange(e.target.value)}
-          placeholder="Search by device name or UUID..."
+          placeholder="Enter or paste time to search..."
           prefix={<SearchOutlined className="text-slate-400 text-lg mr-2" />}
           allowClear
           className="!rounded-full !py-2.5 !px-5 !border-solid !border-slate-300 hover:!border-[#0099FF] focus:!border-[#0099FF] shadow-xs text-[15px]"
@@ -56,29 +49,6 @@ export const ActionHistoryFilterBar: React.FC<ActionHistoryFilterBarProps> = ({
 
       {/* Cụm Filter Device, Action & Sort bên phải */}
       <div className="w-full xl:w-auto flex items-center justify-end gap-4 flex-wrap">
-        <div className="flex items-center gap-2">
-          <span className="text-slate-800 text-[15px] font-semibold whitespace-nowrap">From:</span>
-          <DatePicker
-            showTime
-            value={startTime ? dayjs(startTime) : null}
-            onChange={(value) => onTimeRangeChange(value?.format('YYYY-MM-DD HH:mm:ss') ?? null, endTime)}
-            format="YYYY-MM-DD HH:mm:ss"
-            placeholder="Start time"
-            className="w-[190px] !min-h-[40px] !rounded-full !border-solid !border-slate-300 hover:!border-[#0099FF]"
-          />
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="text-slate-800 text-[15px] font-semibold whitespace-nowrap">To:</span>
-          <DatePicker
-            showTime
-            value={endTime ? dayjs(endTime) : null}
-            onChange={(value) => onTimeRangeChange(startTime, value?.format('YYYY-MM-DD HH:mm:ss') ?? null)}
-            format="YYYY-MM-DD HH:mm:ss"
-            placeholder="End time"
-            className="w-[190px] !min-h-[40px] !rounded-full !border-solid !border-slate-300 hover:!border-[#0099FF]"
-          />
-        </div>
         {/* Device Filter */}
         <div className="flex items-center gap-2">
           <span className="text-slate-800 text-[15px] font-semibold whitespace-nowrap">
@@ -106,7 +76,6 @@ export const ActionHistoryFilterBar: React.FC<ActionHistoryFilterBarProps> = ({
               { value: 'all', label: 'All Status' },
               { value: 'SUCCESS', label: 'Success' },
               { value: 'FAILED', label: 'Failed' },
-              { value: 'PENDING', label: 'Pending' },
             ]}
           />
         </div>

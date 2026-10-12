@@ -1,2 +1,0 @@
-// Common components export
-export {};

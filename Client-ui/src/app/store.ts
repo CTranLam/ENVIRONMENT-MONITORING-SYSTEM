@@ -3,7 +3,6 @@ import { profileReducer } from '@/features/profile';
 import { dashboardReducer } from '@/features/dashboard';
 import { sensorDataReducer } from '@/features/monitoring';
 import { actionHistoryReducer } from '@/features/action-history';
-import { alertsReducer } from '@/features/alerts';
 import { authReducer } from '@/features/auth';
 
 export const store = configureStore({
@@ -13,7 +12,6 @@ export const store = configureStore({
     dashboard: dashboardReducer,
     sensorData: sensorDataReducer,
     actionHistory: actionHistoryReducer,
-    alerts: alertsReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
