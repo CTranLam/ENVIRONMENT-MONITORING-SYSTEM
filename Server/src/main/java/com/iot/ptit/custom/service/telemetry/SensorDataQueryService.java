@@ -7,6 +7,8 @@ import com.iot.ptit.custom.entity.telemetry.SensorData;
 import com.iot.ptit.custom.enums.SensorType;
 import com.iot.ptit.custom.repository.telemetry.SensorDataRepository;
 import com.iot.ptit.custom.repository.telemetry.SensorRepository;
+import com.iot.ptit.base.utils.HistoryTimeSearch;
+import com.iot.ptit.base.utils.HistoryTimeSearch.TimeRange;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -18,12 +20,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.time.DateTimeException;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -43,7 +39,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SensorDataQueryService {
     private static final int MAX_PAGE_SIZE = 100;
-    private static final DateTimeFormatter DISPLAY_TIMESTAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     /** Sort keys accepted from the web client, mapped to entity paths. */
     private static final Map<String, String> SORT_PATHS = Map.of(
@@ -71,7 +66,7 @@ public class SensorDataQueryService {
         int safePageSize = Math.clamp(pageSize, 1, MAX_PAGE_SIZE);
 
         Specification<SensorData> specification = buildSpecification(
-                search, parseTimeRange(search, timeZone), parseSearchValue(search), parseSensorType(type), startTime, endTime);
+                search, HistoryTimeSearch.parse(search, timeZone), parseSearchValue(search), parseSensorType(type), startTime, endTime);
         Pageable pageable = PageRequest.of(safePage - 1, safePageSize, buildSort(sortBy, sortOrder));
 
         Page<SensorData> result = sensorDataRepository.findAllFiltered(specification, pageable);
@@ -198,45 +193,6 @@ public class SensorDataQueryService {
         }
     }
 
-    /**
-     * Parses the timestamp copied from the client table in the browser's IANA timezone.
-     * A date means a whole local day; a date-time means the displayed second.
-     */
-    private TimeRange parseTimeRange(String search, String timeZone) {
-        if (search == null || search.isBlank()) {
-            return null;
-        }
-        ZoneId zoneId = parseZoneId(timeZone);
-        String value = search.trim();
-        try {
-            LocalDate date = LocalDate.parse(value);
-            return new TimeRange(date.atStartOfDay(zoneId).toInstant(), date.plusDays(1).atStartOfDay(zoneId).toInstant());
-        } catch (DateTimeParseException ignored) {
-            // Try the timestamp format rendered in the table next.
-        }
-        try {
-            Instant instant = Instant.parse(value);
-            return new TimeRange(instant, instant.plusSeconds(1));
-        } catch (DateTimeParseException ignored) {
-            // The user normally copies a local timestamp, not an ISO instant.
-        }
-        try {
-            Instant instant = LocalDateTime.parse(value, DISPLAY_TIMESTAMP).atZone(zoneId).toInstant();
-            return new TimeRange(instant, instant.plusSeconds(1));
-        } catch (DateTimeParseException ignored) {
-            return null;
-        }
-    }
-
-    private ZoneId parseZoneId(String timeZone) {
-        try {
-            return timeZone == null || timeZone.isBlank() ? ZoneId.of("UTC") : ZoneId.of(timeZone);
-        } catch (DateTimeException exception) {
-            return ZoneId.of("UTC");
-        }
-    }
-
-    private record TimeRange(Instant start, Instant endExclusive) { }
 
     private SensorDataRecordResponse toResponse(SensorData data, Sensor sensor) {
         return new SensorDataRecordResponse(

@@ -86,7 +86,9 @@ Hệ thống được thiết kế theo mô hình 4 tầng tương tác khép k�
    {"deviceKey": "ledGreen", "targetState": true}
    ```
 3. Backend `DeviceControlService.command()`:
-   - Lưu bản ghi mới vào bảng `action_history` với trạng thái `SUCCESS`; nếu publish MQTT thất bại, bản ghi chuyển thành `FAILED`.
+   - Lưu bản ghi mới vào bảng `action_history` với trạng thái `PENDING`.
+   - Nếu publish MQTT thất bại, bản ghi chuyển thành `FAILED`; nếu ESP gửi ACK `ON`/`OFF` khớp lệnh, bản ghi chuyển thành `SUCCESS`.
+   - Nếu không có ACK trong 12 giây, job kiểm tra định kỳ chuyển bản ghi `PENDING` thành `FAILED`.
    - Bắn chuỗi lệnh thô tương ứng sang MQTT topic **`home/led/control`**: `"GREEN_ON"`, `"GREEN_OFF"`, `"RED_ON"`, `"RED_OFF"`.
    - Trả về phản hồi `DeviceStatusResponse` cho HTTP request.
 4. ESP8266 nhận lệnh qua callback MQTT:
@@ -156,7 +158,7 @@ Hệ thống sử dụng **PostgreSQL 16**, quản lý lược đồ tự độn
 | `devices` | `Device` | Danh mục thiết bị chấp hành | Seed sẵn 2 thiết bị: `LED_GREEN` (D1) và `LED_RED` (D2). Cột `current_status` (`ON`, `OFF`, `UNKNOWN`). |
 | `sensors` | `Sensor` | Danh mục cảm biến | Seed sẵn 3 cảm biến: `TEMPERATURE`, `HUMIDITY`, `LIGHT`. |
 | `sensor_data` | `SensorData` | Dữ liệu đo đạc cảm biến | **Không kế thừa BaseEntity**, append-only time-series, đánh index `(sensor_id, recorded_at DESC)` và `(recorded_at DESC)`. Raw telemetry được giữ 7 ngày, sau đó job hằng ngày xóa theo lô 10.000 bản ghi. |
-| `action_history` | `ActionHistory` | Lịch sử thao tác thiết bị | Lưu `device_id`, `user_id`, `action` (`ON`/`OFF`), `trigger_by` (`MANUAL`/`AUTOMATION`/`SYSTEM`), `status` (`SUCCESS`/`FAILED`), và **`action_at`** — mốc thời gian nghiệp vụ dùng để lọc/sắp xếp (khác `created_at`/`updated_at` là cột audit bị Hibernate ghi đè). Index `(action_at DESC)`, `(device_id, action_at DESC)`. |
+| `action_history` | `ActionHistory` | Lịch sử thao tác thiết bị | Lưu `device_id`, `user_id`, `action` (`ON`/`OFF`), `trigger_by` (`MANUAL`/`AUTOMATION`/`SYSTEM`), `status` (`PENDING`/`SUCCESS`/`FAILED`), và **`action_at`** — mốc thời gian nghiệp vụ dùng để lọc/sắp xếp (khác `created_at`/`updated_at` là cột audit bị Hibernate ghi đè). `PENDING` chờ ACK ESP, `SUCCESS` có ACK khớp, `FAILED` khi publish broker lỗi hoặc quá 12 giây không ACK. Index `(action_at DESC)`, `(device_id, action_at DESC)`. |
 
 ---
 
@@ -281,3 +283,8 @@ docker ps
 * `TelemetryRetentionService` chạy lúc 02:15 UTC mỗi ngày và xóa các bản ghi cũ theo transaction từng lô, mặc định 10.000 dòng/lô. Không áp dụng chính sách này cho `action_history`.
 * Có thể cấu hình qua `TELEMETRY_RETENTION_DAYS`, `TELEMETRY_CLEANUP_BATCH_SIZE`, `TELEMETRY_CLEANUP_CRON`, và `TELEMETRY_CLEANUP_ZONE`; thay đổi thời gian giữ phải được cân nhắc theo dung lượng PostgreSQL và nhu cầu báo cáo.
 
+
+* Tìm kiếm thời gian trên Action History và Sensor Data nhận tiền tố `YYYY`, `YYYY-MM`,
+  `YYYY-MM-DD`, `YYYY-MM-DD HH`, `YYYY-MM-DD HH:mm`, `YYYY-MM-DD HH:mm:ss`.
+  `HistoryTimeSearch` dùng `timeZone` IANA của browser để tạo khoảng `[start, endExclusive)`
+  bao trọn đơn vị đã nhập, bao gồm phần lẻ giây; ISO instant vẫn được hỗ trợ.

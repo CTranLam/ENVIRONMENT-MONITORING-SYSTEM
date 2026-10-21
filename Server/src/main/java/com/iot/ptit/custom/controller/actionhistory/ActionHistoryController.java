@@ -3,6 +3,7 @@ package com.iot.ptit.custom.controller.actionhistory;
 import com.iot.ptit.custom.dto.actionhistory.PaginatedActionHistoryResponse;
 import com.iot.ptit.custom.service.actionhistory.ActionHistoryQueryService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -32,7 +33,12 @@ public class ActionHistoryController {
     private final ActionHistoryQueryService actionHistoryQueryService;
 
     @GetMapping("/history")
-    @Operation(summary = "Query device control history with paging, filtering and sorting")
+    @Operation(
+            summary = "Get paginated device-control history",
+            description = "Filters the Action History table. The search box accepts a local date "
+                    + "(yyyy-MM-dd) or local timestamp (yyyy-MM-dd HH:mm:ss); send the browser IANA timezone "
+                    + "in timeZone so it can be converted to an absolute instant."
+    )
     public PaginatedActionHistoryResponse getHistory(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String timeZone,
@@ -43,10 +49,12 @@ public class ActionHistoryController {
             @Pattern(regexp = "all|ON|OFF|on|off", message = "Unsupported action.")
             String action,
             @RequestParam(defaultValue = "all")
-            @Pattern(regexp = "all|SUCCESS|FAILED|success|failed", message = "Unsupported status.")
+            @Pattern(regexp = "all|PENDING|SUCCESS|FAILED|pending|success|failed", message = "Unsupported status.")
             String status,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startTime,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endTime,
+            @Parameter(hidden = true) @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startTime,
+            @Parameter(hidden = true) @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endTime,
             @RequestParam(defaultValue = "timestamp") String sortBy,
             @RequestParam(defaultValue = "desc") String sortOrder,
             @RequestParam(defaultValue = "1") @Min(1) int page,

@@ -17,12 +17,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/telemetry")
 @RequiredArgsConstructor
 @Validated
-@Tag(name = "Telemetry")
+@Tag(name = "Dashboard Telemetry", description = "Initial chart data for the monitoring dashboard")
 public class TelemetryController {
     private final DashboardTelemetryService dashboardTelemetryService;
 
     @GetMapping("/dashboard")
-    @Operation(summary = "Get recent telemetry points for the dashboard charts")
+    @Operation(summary = "Get recent telemetry points for all three dashboard charts")
     public DashboardTelemetryResponse getDashboardTelemetry(
             @RequestParam(defaultValue = "60") @Min(1) @Max(120) int limit
     ) {

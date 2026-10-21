@@ -18,7 +18,9 @@ public class OpenApiConfiguration {
                 .info(new Info()
                         .title("Environment Monitoring System API")
                         .version("v1")
-                        .description("API for environmental telemetry and connected-device control."))
+                        .description("REST API for EMS. Except for Authentication endpoints, requests require a "
+                                + "Bearer JWT. Realtime telemetry, device acknowledgements, and ESP status are "
+                                + "delivered through authenticated STOMP WebSocket subscriptions at /ws."))
                 .addSecurityItem(new SecurityRequirement().addList(BEARER_AUTH))
                 .components(new Components().addSecuritySchemes(BEARER_AUTH, new SecurityScheme()
                         .type(SecurityScheme.Type.HTTP)

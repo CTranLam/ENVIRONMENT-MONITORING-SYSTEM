@@ -3,6 +3,7 @@ package com.iot.ptit.custom.controller.telemetry;
 import com.iot.ptit.custom.dto.telemetry.PaginatedSensorDataResponse;
 import com.iot.ptit.custom.service.telemetry.SensorDataQueryService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -32,15 +33,21 @@ public class SensorDataController {
     private final SensorDataQueryService sensorDataQueryService;
 
     @GetMapping("/history")
-    @Operation(summary = "Query persisted sensor telemetry with paging, filtering and sorting")
+    @Operation(
+            summary = "Get paginated persisted sensor telemetry",
+            description = "Filters the Sensor Data table by metric, search value, local date/timestamp, sorting and page. "
+                    + "Send the browser IANA timezone in timeZone when searching a displayed local date or timestamp."
+    )
     public PaginatedSensorDataResponse getHistory(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String timeZone,
             @RequestParam(defaultValue = "all")
             @Pattern(regexp = "all|temperature|humidity|light|TEMPERATURE|HUMIDITY|LIGHT", message = "Unsupported sensor type.")
             String type,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startTime,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endTime,
+            @Parameter(hidden = true) @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startTime,
+            @Parameter(hidden = true) @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endTime,
             @RequestParam(defaultValue = "timestamp") String sortBy,
             @RequestParam(defaultValue = "desc") String sortOrder,
             @RequestParam(defaultValue = "1") @Min(1) int page,

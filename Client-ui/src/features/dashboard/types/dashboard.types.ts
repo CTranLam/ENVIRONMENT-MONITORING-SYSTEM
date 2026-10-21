@@ -19,7 +19,7 @@ export type DeviceControlResponse = DeviceStatusResponse;
 export interface DeviceStatusResponse {
   deviceKey: DeviceKey;
   on: boolean;
-  status: 'ON' | 'OFF' | 'UNKNOWN' | 'SUCCESS' | 'FAILED';
+  status: 'ON' | 'OFF' | 'UNKNOWN' | 'PENDING' | 'SUCCESS' | 'FAILED';
 }
 
 export interface EspStatusResponse {

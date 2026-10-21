@@ -33,7 +33,8 @@ export const SensorDataFilterBar: React.FC<SensorDataFilterBarProps> = ({
           value={searchInput}
           onChange={(e) => onSearchChange(e.target.value)}
           onPressEnter={onSearchSubmit}
-          placeholder={selectedType === 'time' ? 'Enter time, then press Enter...' : selectedType === 'all' ? 'Search name, UUID, or value, then press Enter...' : 'Enter sensor value, then press Enter...'}
+          title={selectedType === 'time' ? 'Search by year, month, day, hour, minute, or second; e.g. 2026-10-21 13:40' : undefined}
+          placeholder={selectedType === 'time' ? 'YYYY-MM-DD HH:mm:ss (or shorter), Enter...' : selectedType === 'all' ? 'Search name, UUID, or value, then press Enter...' : 'Enter sensor value, then press Enter...'}
           prefix={(
             <button
               type="button"

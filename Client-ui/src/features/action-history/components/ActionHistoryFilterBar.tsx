@@ -40,7 +40,8 @@ export const ActionHistoryFilterBar: React.FC<ActionHistoryFilterBarProps> = ({
         <Input
           value={searchInput}
           onChange={(e) => onSearchChange(e.target.value)}
-          placeholder="Enter or paste time to search..."
+          placeholder="YYYY-MM-DD HH:mm:ss (or shorter)"
+          title="Search by year, month, day, hour, minute, or second; e.g. 2026-10-21 13:40"
           prefix={<SearchOutlined className="text-slate-400 text-lg mr-2" />}
           allowClear
           className="!rounded-full !py-2.5 !px-5 !border-solid !border-slate-300 hover:!border-[#0099FF] focus:!border-[#0099FF] shadow-xs text-[15px]"
@@ -74,6 +75,7 @@ export const ActionHistoryFilterBar: React.FC<ActionHistoryFilterBarProps> = ({
             className="w-[130px] [&_.ant-select-selector]:!rounded-full [&_.ant-select-selector]:!border-solid [&_.ant-select-selector]:!border-slate-300 [&_.ant-select-selector]:!min-h-[40px] [&_.ant-select-selection-item]:!leading-[38px] text-[14.5px]"
             options={[
               { value: 'all', label: 'All Status' },
+              { value: 'PENDING', label: 'Pending' },
               { value: 'SUCCESS', label: 'Success' },
               { value: 'FAILED', label: 'Failed' },
             ]}

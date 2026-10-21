@@ -25,7 +25,7 @@ import java.util.UUID;
 @RestController
 @RequiredArgsConstructor 
 @RequestMapping("/api/profile/me")
-@Tag(name = "Profile")
+@Tag(name = "Profile", description = "Read and update the signed-in user's profile and avatar")
 public class ProfileController {
     private final ProfileService profileService;
 
@@ -36,7 +36,7 @@ public class ProfileController {
     }
 
     @PutMapping
-    @Operation(summary = "Update profile fields")
+    @Operation(summary = "Update profile fields without changing the password")
     public ResponseEntity<UserProfileResponse> updateProfile(
             @AuthenticationPrincipal UUID userId,
             @Valid @RequestBody UpdateProfileRequest request
@@ -49,7 +49,7 @@ public class ProfileController {
      * {@code avatarUrl} already points at the stored object.
      */
     @PostMapping(value = "/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "Upload the signed-in user's avatar image")
+    @Operation(summary = "Upload the signed-in user's avatar image (PNG, JPEG, or WEBP; maximum 2 MB)")
     public ResponseEntity<UserProfileResponse> uploadAvatar(
             @AuthenticationPrincipal UUID userId,
             @RequestParam("file") MultipartFile file

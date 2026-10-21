@@ -9,6 +9,7 @@ import {
   SwapOutlined,
   CheckCircleFilled,
   CloseCircleFilled,
+  ClockCircleFilled,
   UserOutlined,
 } from '@ant-design/icons';
 import type {
@@ -45,6 +46,15 @@ export const ActionHistoryTable: React.FC<ActionHistoryTableProps> = ({
   const handleCopyId = (id: string) => {
     navigator.clipboard.writeText(id);
     message.success('Đã sao chép Device UUID!');
+  };
+
+  const handleCopyTimestamp = async (timestamp: string): Promise<void> => {
+    try {
+      await navigator.clipboard.writeText(timestamp);
+      message.success('Đã sao chép thời gian!');
+    } catch {
+      message.error('Không thể sao chép thời gian. Vui lòng thử lại.');
+    }
   };
 
   // Nút sort cạnh tiêu đề từng cột
@@ -107,9 +117,10 @@ export const ActionHistoryTable: React.FC<ActionHistoryTableProps> = ({
     );
   };
 
-  // Badge hiển thị Status (SUCCESS / FAILED)
+  // Badge hiển thị trạng thái giao lệnh và phản hồi ACK từ ESP8266.
   const renderStatusBadge = (status: ActionStatus) => {
     const styles: Record<ActionStatus, string> = {
+      PENDING: 'bg-amber-50 text-amber-700 border-amber-200',
       SUCCESS: 'bg-emerald-50 text-emerald-700 border-emerald-200',
       FAILED: 'bg-red-50 text-red-600 border-red-200',
     };
@@ -117,6 +128,7 @@ export const ActionHistoryTable: React.FC<ActionHistoryTableProps> = ({
       <span
         className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[13px] font-bold border border-solid shadow-xs ${styles[status]}`}
       >
+        {status === 'PENDING' && <ClockCircleFilled className="text-amber-500 text-xs" />}
         {status === 'SUCCESS' && <CheckCircleFilled className="text-emerald-500 text-xs" />}
         {status === 'FAILED' && <CloseCircleFilled className="text-red-500 text-xs" />}
         <span>{status}</span>
@@ -241,7 +253,18 @@ export const ActionHistoryTable: React.FC<ActionHistoryTableProps> = ({
 
                   {/* TIMESTAMP */}
                   <td className="py-4 px-6 text-slate-600 font-mono text-[13.5px] font-medium">
-                    {record.timestamp}
+                    <div className="flex items-center gap-2.5 whitespace-nowrap">
+                      <span className="select-all">{record.timestamp}</span>
+                      <button
+                        type="button"
+                        onClick={() => void handleCopyTimestamp(record.timestamp)}
+                        className="text-slate-400 hover:text-[#0099FF] p-1.5 rounded-md hover:bg-slate-100 transition-all border-none bg-transparent cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#0099FF]"
+                        title="Sao chép thời gian"
+                        aria-label={`Sao chép thời gian ${record.timestamp}`}
+                      >
+                        <CopyOutlined className="text-sm" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))

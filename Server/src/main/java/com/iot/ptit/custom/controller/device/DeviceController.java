@@ -5,6 +5,8 @@ import com.iot.ptit.custom.dto.device.DeviceStatusResponse;
 import com.iot.ptit.custom.dto.device.EspStatusResponse;
 import com.iot.ptit.custom.service.device.DeviceControlService;
 import com.iot.ptit.custom.service.device.EspStatusService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -20,14 +22,17 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/devices")
 @RequiredArgsConstructor
+@Tag(name = "Devices", description = "Device states, control commands, and ESP8266 availability")
 public class DeviceController {
     private final DeviceControlService deviceControlService;
     private final EspStatusService espStatusService;
 
     @GetMapping("/status")
+    @Operation(summary = "Get the latest known state of each device")
     public List<DeviceStatusResponse> getStatuses() { return deviceControlService.getStatuses(); }
 
     @PostMapping("/control")
+    @Operation(summary = "Send an ON or OFF command to an LED through MQTT")
     public DeviceStatusResponse control(
             @AuthenticationPrincipal UUID userId,
             @Valid @RequestBody DeviceControlRequest request
@@ -36,5 +41,6 @@ public class DeviceController {
     }
 
     @GetMapping("/esp-status")
+    @Operation(summary = "Get the current ESP8266 online status")
     public EspStatusResponse getEspStatus() { return espStatusService.getStatus(); }
 }

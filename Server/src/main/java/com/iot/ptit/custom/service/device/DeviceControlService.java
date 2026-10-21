@@ -19,12 +19,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.context.event.EventListener;
 import org.springframework.http.HttpStatus;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -32,6 +35,7 @@ import java.util.UUID;
 @Slf4j
 @RequiredArgsConstructor
 public class DeviceControlService {
+    private static final Duration ACK_TIMEOUT = Duration.ofSeconds(12);
     private final DeviceRepository deviceRepository;
     private final ActionHistoryRepository actionHistoryRepository;
     private final AppUserRepository appUserRepository;
@@ -47,20 +51,11 @@ public class DeviceControlService {
                 .toList();
     }
 
-    /**
-     * Handle a manual control request coming from the web control panel.
-     *
-     * <p>The audit row is committed in its own transaction before the MQTT command is
-     * published, so a broker outage can never roll back (and silently lose) the audit
-     * trail. A publish starts as {@code SUCCESS}; if it fails the row is flipped to
-     * {@code FAILED} and the caller receives a 503.</p>
-     */
     public DeviceStatusResponse command(UUID userId, DeviceControlRequest request) {
         String deviceName = toDeviceName(request.deviceKey());
         DeviceActionType action = request.targetState() ? DeviceActionType.ON : DeviceActionType.OFF;
 
-        // Step 1: commit the audit row in an isolated transaction. Its default status
-        // is SUCCESS because broker delivery is the observable completion criterion.
+
         ActionHistory history = inNewTransaction(() -> {
             Device device = deviceRepository.findByDeviceNameAndDeletedFalse(deviceName)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Device was not found."));
@@ -69,8 +64,6 @@ public class DeviceControlService {
             return actionHistoryRepository.save(new ActionHistory(device, user, action, ActionTrigger.MANUAL));
         });
 
-        // Step 2: publish the raw command to the ESP8266. Failures are contained here so
-        // the audit row committed above always survives.
         try {
             mqttClient.publishDeviceCommand(toCommand(deviceName, request.targetState()));
         } catch (RuntimeException exception) {
@@ -81,7 +74,7 @@ public class DeviceControlService {
                     "The device command could not be delivered to the MQTT broker.");
         }
 
-        return new DeviceStatusResponse(request.deviceKey(), request.targetState(), "SUCCESS");
+        return new DeviceStatusResponse(request.deviceKey(), request.targetState(), ActionStatus.PENDING.name());
     }
 
     @EventListener
@@ -95,8 +88,44 @@ public class DeviceControlService {
         DeviceStatus status = "ON".equals(payload.status()) ? DeviceStatus.ON
                 : "OFF".equals(payload.status()) ? DeviceStatus.OFF : DeviceStatus.UNKNOWN;
         device.setCurrentStatus(status);
+        markAcknowledgedActionSuccessful(device, payload, status);
         DeviceStatusResponse response = toResponse(device);
         messagingTemplate.convertAndSend("/topic/device-status", response);
+    }
+
+
+    private void markAcknowledgedActionSuccessful(
+            Device device,
+            MqttDeviceStatusPayload payload,
+            DeviceStatus deviceStatus
+    ) {
+        DeviceActionType action = acknowledgedAction(payload, deviceStatus);
+        if (action == null) {
+            return;
+        }
+        actionHistoryRepository
+                .findFirstByDevice_IdAndActionAndStatusOrderByActionAtDesc(
+                        device.getId(), action, ActionStatus.PENDING)
+                .ifPresent(history -> history.setStatus(ActionStatus.SUCCESS));
+    }
+
+    private DeviceActionType acknowledgedAction(MqttDeviceStatusPayload payload, DeviceStatus deviceStatus) {
+        if ("TURN_ON".equals(payload.action()) && deviceStatus == DeviceStatus.ON) {
+            return DeviceActionType.ON;
+        }
+        if ("TURN_OFF".equals(payload.action()) && deviceStatus == DeviceStatus.OFF) {
+            return DeviceActionType.OFF;
+        }
+        return null;
+    }
+
+    /** Marks commands failed when an ESP acknowledgement does not arrive within 12 seconds. */
+    @Scheduled(fixedDelay = 3000)
+    @Transactional
+    public void failExpiredPendingActions() {
+        Instant cutoff = Instant.now().minus(ACK_TIMEOUT);
+        actionHistoryRepository.findAllByStatusAndActionAtBefore(ActionStatus.PENDING, cutoff)
+                .forEach(history -> history.setStatus(ActionStatus.FAILED));
     }
 
     /**

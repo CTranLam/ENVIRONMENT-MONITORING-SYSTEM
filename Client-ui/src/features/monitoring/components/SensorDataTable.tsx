@@ -49,6 +49,15 @@ export const SensorDataTable: React.FC<SensorDataTableProps> = ({
     message.success('Đã sao chép UUID v7!');
   };
 
+  const handleCopyTimestamp = async (timestamp: string): Promise<void> => {
+    try {
+      await navigator.clipboard.writeText(timestamp);
+      message.success('Đã sao chép thời gian!');
+    } catch {
+      message.error('Không thể sao chép thời gian. Vui lòng thử lại.');
+    }
+  };
+
   // Helper render nút sort cạnh tiêu đề cột
   const renderSortIndicator = (field: SortField) => {
     const isActive = sortBy === field;
@@ -212,7 +221,18 @@ export const SensorDataTable: React.FC<SensorDataTableProps> = ({
 
                   {/* TIMESTAMP */}
                   <td className="py-4 px-6 text-slate-600 font-mono text-[13.5px] font-medium">
-                    {record.timestamp}
+                    <div className="flex items-center gap-2.5 whitespace-nowrap">
+                      <span className="select-all">{record.timestamp}</span>
+                      <button
+                        type="button"
+                        onClick={() => void handleCopyTimestamp(record.timestamp)}
+                        className="text-slate-400 hover:text-[#0099FF] p-1.5 rounded-md hover:bg-slate-100 transition-all border-none bg-transparent cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#0099FF]"
+                        title="Sao chép thời gian"
+                        aria-label={`Sao chép thời gian ${record.timestamp}`}
+                      >
+                        <CopyOutlined className="text-sm" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))

@@ -44,7 +44,10 @@ public class ActionHistory extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private ActionStatus status = ActionStatus.SUCCESS;
+    /**
+     * A command remains pending until the ESP8266 publishes a matching ON/OFF acknowledgement.
+     */
+    private ActionStatus status = ActionStatus.PENDING;
 
     /**
      * Business timestamp: when the control action was requested.

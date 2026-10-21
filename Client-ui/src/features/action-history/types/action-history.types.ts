@@ -5,7 +5,7 @@ export type ActionHistoryDeviceFilter = 'all' | DeviceType;
 
 export type DeviceAction = 'ON' | 'OFF';
 
-export type ActionStatus = 'SUCCESS' | 'FAILED';
+export type ActionStatus = 'PENDING' | 'SUCCESS' | 'FAILED';
 export type ActionHistoryStatusFilter = 'all' | ActionStatus;
 
 export type ActionSortField = 'deviceId' | 'device' | 'action' | 'status' | 'timestamp';

@@ -38,6 +38,7 @@ const DEVICE_KEYS: Record<string, DeviceType> = {
 const ACTION_VALUES: Record<string, DeviceAction> = { ON: 'ON', OFF: 'OFF' };
 
 const STATUS_VALUES: Record<string, ActionStatus> = {
+  PENDING: 'PENDING',
   SUCCESS: 'SUCCESS',
   FAILED: 'FAILED',
 };
